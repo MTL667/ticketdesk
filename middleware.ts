@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
   // Redirect unauthenticated users to sign-in
   if (!token) {
     const signInUrl = new URL("/api/auth/signin", request.url);
-    signInUrl.searchParams.set("callbackUrl", encodeURIComponent(pathname));
+    signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
   }
 
