@@ -87,6 +87,46 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
+// Export auth function for use in server components and API routes
+// For NextAuth v5, we need to use cookies() to get the session
+export const auth = async () => {
+  try {
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    
+    // Get the session token from cookies
+    const sessionToken = cookieStore.get("next-auth.session-token")?.value || 
+                        cookieStore.get("__Secure-next-auth.session-token")?.value;
+    
+    if (!sessionToken) {
+      return null;
+    }
+
+    // Decode and verify the JWT token
+    const { decode } = await import("next-auth/jwt");
+    const token = await decode({
+      token: sessionToken,
+      secret: process.env.NEXTAUTH_SECRET!,
+    });
+
+    if (!token || !token.email) {
+      return null;
+    }
+
+    // Return session object matching NextAuth structure
+    return {
+      user: {
+        email: token.email as string,
+        tenantId: (token.tenantId as string) || "",
+      },
+    };
+  } catch (error) {
+    console.error("Error getting session:", error);
+    return null;
+  }
+};
+
 export { handler as GET, handler as POST };
+export { authOptions };
 
 

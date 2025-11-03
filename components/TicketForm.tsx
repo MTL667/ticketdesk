@@ -301,7 +301,7 @@ export function TicketForm() {
       {/* Attachments */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Optioneel: bijlagen, foto's / Facultatif: pièces jointes, photos
+          Optioneel: bijlagen, foto&apos;s / Facultatif: pièces jointes, photos
         </label>
         <input
           type="file"

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { auth } from "../auth/[...nextauth]/route";
 import { createTask, getTasks, filterTasksByEmail, uploadAttachment } from "@/lib/clickup";
 
 // Priority mapping
@@ -41,7 +40,7 @@ const TOEPASSINGSGEBIED_MAP: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -138,7 +137,7 @@ Tenant ID: ${session.user.tenantId || "N/A"}
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.email) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
