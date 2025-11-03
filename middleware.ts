@@ -3,24 +3,29 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Get the pathname
+  const pathname = request.nextUrl.pathname;
+
+  // Allow public paths
+  const isPublicPath = 
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico";
+
+  if (isPublicPath) {
+    return NextResponse.next();
+  }
+
+  // Check authentication
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  // Allow access to auth routes and public assets
-  if (
-    request.nextUrl.pathname.startsWith("/api/auth") ||
-    request.nextUrl.pathname.startsWith("/_next") ||
-    request.nextUrl.pathname.startsWith("/favicon.ico")
-  ) {
-    return NextResponse.next();
-  }
-
   // Redirect unauthenticated users to sign-in
   if (!token) {
     const signInUrl = new URL("/api/auth/signin", request.url);
-    signInUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+    signInUrl.searchParams.set("callbackUrl", encodeURIComponent(pathname));
     return NextResponse.redirect(signInUrl);
   }
 
@@ -30,13 +35,14 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (NextAuth routes)
+     * Match all request paths except:
+     * - api/auth (auth routes)
      * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - _next/image (image optimization)
+     * - favicon.ico
+     * - public files
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 
