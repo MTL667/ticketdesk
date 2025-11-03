@@ -127,6 +127,5 @@ export const auth = async () => {
 };
 
 export { handler as GET, handler as POST };
-export { authOptions };
 
 
