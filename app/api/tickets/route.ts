@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 import { createTask, getTasks, filterTasksByEmail, uploadAttachment } from "@/lib/clickup";
 
 // Priority mapping

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../auth/[...nextauth]/route";
+import { auth } from "@/lib/auth";
 import { getTask, filterTasksByEmail } from "@/lib/clickup";
 
 export async function GET(
