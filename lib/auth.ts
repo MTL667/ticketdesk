@@ -89,6 +89,7 @@ export const authOptions = {
     signIn: "/api/auth/signin",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
 };
 
 // Initialize NextAuth and export handlers, auth function, etc.
