@@ -102,7 +102,7 @@ export default async function TicketsPage() {
   const session = await auth();
 
   if (!session) {
-    redirect("/api/auth/signin");
+    redirect("/signin");
   }
 
   const tickets = await getTickets();

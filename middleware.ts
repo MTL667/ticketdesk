@@ -8,7 +8,8 @@ export default auth((req) => {
   const isPublicPath = 
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
-    pathname === "/favicon.ico";
+    pathname === "/favicon.ico" ||
+    pathname === "/signin";
 
   if (isPublicPath) {
     return NextResponse.next();
@@ -16,7 +17,7 @@ export default auth((req) => {
 
   // Check if user is authenticated
   if (!req.auth) {
-    const signInUrl = new URL("/api/auth/signin", req.url);
+    const signInUrl = new URL("/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);
   }
