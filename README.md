@@ -149,23 +149,30 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 
 ## Ticket Filtering Configuration
 
-By default, the app shows **all tickets** from the ClickUp list. To enable per-user filtering:
+⚠️ **Email filtering is ACTIVE** - users only see tickets associated with their email address.
 
-### Option 1: Add Email Custom Field to ClickUp Form (Recommended)
+### Requirements:
+
+Your ClickUp form **MUST** include an email field for tickets to be visible:
 
 1. In your ClickUp List, create a custom field named "Email" or "Requester Email" (type: Email or Text)
-2. Add this field to your ClickUp Form
-3. Users must fill in their email address when submitting tickets
-4. Uncomment the filtering line in `app/api/tickets/route.ts`:
-   ```typescript
-   const userTasks = filterTasksByEmail(tasks, session.user.email);
-   ```
+2. Add this field to your ClickUp Form and mark it as **Required**
+3. Users must fill in their login email address when submitting tickets
 
-### Option 2: Email in Description
+### How It Works:
 
-Alternatively, ensure user emails are included in the ticket description. The app will automatically detect them.
+The app filters tickets by searching for the user's email in:
+1. **Custom fields** named "email", "e-mail", or containing "email" (case insensitive)
+2. **Description** text (fallback)
 
-**Current Status:** All users can see all tickets until email filtering is configured.
+### Important Notes:
+
+- ✅ Users only see tickets with their email address
+- ❌ Tickets without an email are not visible to any user
+- 🔒 This provides privacy - users cannot see each other's tickets
+- 📧 The app shows the user's email on the form page as a reminder
+
+**See `CLICKUP_FORM_SETUP.md` for detailed setup instructions.**
 
 ## Security
 

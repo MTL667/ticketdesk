@@ -2,6 +2,15 @@
 
 Deze guide legt uit hoe je het ClickUp formulier configureert zodat tickets correct gekoppeld worden aan gebruikers.
 
+## ⚠️ **BELANGRIJK: Email Filtering is ACTIEF**
+
+De app filtert nu tickets op basis van het e-mailadres. Dit betekent:
+- ✅ Gebruikers zien **alleen hun eigen tickets**
+- ⚠️ Het email veld in het ClickUp formulier is **VERPLICHT**
+- ❌ Tickets zonder email adres zijn **niet zichtbaar** voor gebruikers
+
+Volg deze guide zorgvuldig om ervoor te zorgen dat alle tickets correct worden gekoppeld!
+
 ## 📋 **Stap 1: Custom Field Aanmaken**
 
 1. Ga naar je ClickUp List (waar tickets worden opgeslagen)

@@ -84,10 +84,21 @@ export default async function NewTicketPage() {
       </nav>
 
       <main className="flex-1 flex flex-col">
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-sm text-blue-800">
+              <strong>Let op:</strong> Vul in het formulier uw e-mailadres in:{" "}
+              <span className="font-mono bg-blue-100 px-2 py-1 rounded">
+                {session.user?.email}
+              </span>
+              {" "}zodat u uw ticket later kunt terugvinden.
+            </p>
+          </div>
+        </div>
         <iframe
           src={clickupFormUrl}
           className="w-full flex-1 border-0"
-          style={{ minHeight: "calc(100vh - 64px)" }}
+          style={{ minHeight: "calc(100vh - 112px)" }}
           title="ClickUp Ticket Form"
           allowFullScreen
         />

@@ -12,9 +12,8 @@ export async function GET(request: NextRequest) {
 
     const tasks = await getTasks();
     
-    // Show all tasks for now until ClickUp form is configured with email field
-    // TODO: Filter by email once ClickUp form includes requester email in custom field
-    const userTasks = tasks; // filterTasksByEmail(tasks, session.user.email);
+    // Filter tasks by email (looks in custom fields and description)
+    const userTasks = filterTasksByEmail(tasks, session.user.email);
 
     // Map to ticket format
     const tickets = userTasks.map((task) => {

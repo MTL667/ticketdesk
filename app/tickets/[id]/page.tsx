@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getTask } from "@/lib/clickup";
+import { getTask, filterTasksByEmail } from "@/lib/clickup";
 
 interface TicketDetail {
   id: string;
@@ -33,13 +33,13 @@ async function getTicket(id: string): Promise<TicketDetail | null> {
 
   try {
     const task = await getTask(id);
-
-    // Show all tasks for now until ClickUp form is configured with email field
-    // TODO: Re-enable access control once email filtering is properly configured
-    // const userTasks = filterTasksByEmail([task], session.user.email);
-    // if (userTasks.length === 0) {
-    //   return null;
-    // }
+    
+    // Verify task belongs to user (checks custom fields and description)
+    const userTasks = filterTasksByEmail([task], session.user.email);
+    if (userTasks.length === 0) {
+      console.log(`[TicketDetail] Access denied: Ticket ${id} does not belong to user ${session.user.email}`);
+      return null;
+    }
 
     // Extract metadata from description
     const description = task.description || "";

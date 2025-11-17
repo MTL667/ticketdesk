@@ -16,9 +16,10 @@ async function getTickets(): Promise<Ticket[]> {
     
     console.log(`[Tickets] Fetched ${tasks.length} tasks from ClickUp for user: ${session.user.email}`);
     
-    // Show all tasks for now until ClickUp form is configured with email field
-    // TODO: Filter by email once ClickUp form includes requester email in custom field
-    const userTasks = tasks; // filterTasksByEmail(tasks, session.user.email);
+    // Filter tasks by email (looks in custom fields and description)
+    const userTasks = filterTasksByEmail(tasks, session.user.email);
+    
+    console.log(`[Tickets] Filtered to ${userTasks.length} tickets for user: ${session.user.email}`);
 
     // Map to ticket format
     const tickets: Ticket[] = userTasks.map((task) => {
