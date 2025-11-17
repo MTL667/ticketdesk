@@ -13,20 +13,25 @@ async function getTickets(): Promise<Ticket[]> {
 
   try {
     const tasks = await getTasks();
-    const userTasks = filterTasksByEmail(tasks, session.user.email);
+    
+    console.log(`[Tickets] Fetched ${tasks.length} tasks from ClickUp for user: ${session.user.email}`);
+    
+    // Show all tasks for now until ClickUp form is configured with email field
+    // TODO: Filter by email once ClickUp form includes requester email in custom field
+    const userTasks = tasks; // filterTasksByEmail(tasks, session.user.email);
 
     // Map to ticket format
     const tickets: Ticket[] = userTasks.map((task) => {
       // Extract metadata from description
-      const typeVraagMatch = task.description.match(/Type vraag[^:]*:\s*(.+)/i);
-      const gebouwMatch = task.description.match(/Gebouw[^:]*:\s*(.+)/i);
-      const toepassingsgebiedMatch = task.description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-      const prioriteitMatch = task.description.match(/Prioriteit[^:]*:\s*(\w+)/i);
+      const typeVraagMatch = task.description?.match(/Type vraag[^:]*:\s*(.+)/i);
+      const gebouwMatch = task.description?.match(/Gebouw[^:]*:\s*(.+)/i);
+      const toepassingsgebiedMatch = task.description?.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
+      const prioriteitMatch = task.description?.match(/Prioriteit[^:]*:\s*(\w+)/i);
 
       return {
         id: task.id,
         name: task.name,
-        description: task.description,
+        description: task.description || "",
         status: task.status?.status || "unknown",
         priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
         typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
@@ -42,9 +47,13 @@ async function getTickets(): Promise<Ticket[]> {
       };
     });
 
+    console.log(`[Tickets] Returning ${tickets.length} tickets`);
     return tickets;
   } catch (error) {
-    console.error("Error fetching tickets:", error);
+    console.error("[Tickets] Error fetching tickets:", error);
+    if (error instanceof Error) {
+      console.error("[Tickets] Error details:", error.message);
+    }
     return [];
   }
 }
@@ -141,7 +150,12 @@ export default async function TicketsPage() {
 
         {tickets.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <p className="text-gray-600 mb-4">U heeft nog geen tickets aangemaakt.</p>
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">Er zijn nog geen tickets gevonden.</p>
+              <p className="text-sm text-gray-500">
+                Controleer of er tickets in de ClickUp list staan en of de CLICKUP_LIST_ID correct is ingesteld.
+              </p>
+            </div>
             <Link
               href="/tickets/new"
               className="text-blue-600 hover:text-blue-800 font-medium"
