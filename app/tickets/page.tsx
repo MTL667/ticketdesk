@@ -16,6 +16,11 @@ async function getTickets(): Promise<Ticket[]> {
     
     console.log(`[Tickets] Fetched ${tasks.length} tasks from ClickUp for user: ${session.user.email}`);
     
+    // Debug: Show custom fields for first task
+    if (tasks.length > 0 && tasks[0].custom_fields) {
+      console.log(`[Tickets] Sample task custom fields:`, tasks[0].custom_fields.map(f => ({ id: f.id, name: f.name, value: f.value })));
+    }
+    
     // Filter tasks by email (looks in custom fields and description)
     const userTasks = filterTasksByEmail(tasks, session.user.email);
     

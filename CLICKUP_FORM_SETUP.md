@@ -11,12 +11,21 @@ De app filtert nu tickets op basis van het e-mailadres. Dit betekent:
 
 Volg deze guide zorgvuldig om ervoor te zorgen dat alle tickets correct worden gekoppeld!
 
-## 📋 **Stap 1: Custom Field Aanmaken**
+## 📋 **Stap 1: Custom Field Aanmaken (Reeds Geconfigureerd)**
 
+✅ **Goed nieuws:** Het email custom field bestaat al!
+
+**Field Details:**
+- **Field ID**: `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`
+- **Field Name**: Waarschijnlijk "Contact" of "Email"
+- **Type**: Email of Text
+- **Status**: De app is geconfigureerd om dit field te herkennen
+
+Als het field nog niet bestaat, maak het dan aan met:
 1. Ga naar je ClickUp List (waar tickets worden opgeslagen)
 2. Klik op **"+ Add Custom Field"** (rechts bovenaan of in de lijst instellingen)
 3. Maak een veld aan met:
-   - **Name**: `Email` of `Requester Email` of `E-mailadres`
+   - **Name**: `Email`, `Contact`, `Requester Email` of `E-mailadres`
    - **Type**: `Email` (aanbevolen) of `Text`
    - **Required**: ✅ Ja (zodat het altijd wordt ingevuld)
 
@@ -73,20 +82,16 @@ Voeg de volgende velden toe aan je formulier:
    - Environment Variable: `NEXT_PUBLIC_CLICKUP_FORM_URL`
    - Value: `<de_form_url_die_je_gekopieerd_hebt>`
 
-## ✅ **Stap 6: Filtering Activeren**
+## ✅ **Stap 6: Filtering Status**
 
-Nu de custom field is geconfigureerd, kunnen we de email filtering activeren:
+✅ **Email filtering is al ACTIEF!**
 
-1. Open het bestand `app/api/tickets/route.ts`
-2. Zoek deze regel:
-   ```typescript
-   const userTasks = tasks; // filterTasksByEmail(tasks, session.user.email);
-   ```
-3. Wijzig het naar:
-   ```typescript
-   const userTasks = filterTasksByEmail(tasks, session.user.email);
-   ```
-4. Commit en push naar git
+De app filtert automatisch op basis van:
+1. **Custom field ID**: `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` (eerste prioriteit)
+2. **Field naam**: Velden met "email", "e-mail", of "contact" in de naam (fallback)
+3. **Description**: Email in de ticket beschrijving (laatste optie)
+
+**Geen verdere actie nodig** - de filtering werkt out-of-the-box!
 
 ## 🧪 **Testen**
 

@@ -119,13 +119,26 @@ export async function uploadAttachment(
 }
 
 export function filterTasksByEmail(tasks: ClickUpTask[], email: string): ClickUpTask[] {
+  // Known email custom field ID from ClickUp
+  const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
+  
   return tasks.filter((task) => {
-    // First priority: Check for "Email" or "Requester Email" custom field
+    // First priority: Check for the specific email custom field ID
     if (task.custom_fields) {
       for (const field of task.custom_fields) {
-        // Look for email-related field names (case insensitive)
+        // Check by field ID (most reliable)
+        if (field.id === EMAIL_FIELD_ID) {
+          if (
+            typeof field.value === "string" &&
+            field.value.toLowerCase() === email.toLowerCase()
+          ) {
+            return true;
+          }
+        }
+        
+        // Fallback: Check by field name (for flexibility)
         const fieldName = field.name?.toLowerCase() || "";
-        if (fieldName.includes("email") || fieldName.includes("e-mail")) {
+        if (fieldName.includes("email") || fieldName.includes("e-mail") || fieldName.includes("contact")) {
           if (
             typeof field.value === "string" &&
             field.value.toLowerCase() === email.toLowerCase()
@@ -136,7 +149,7 @@ export function filterTasksByEmail(tasks: ClickUpTask[], email: string): ClickUp
       }
     }
     
-    // Fallback: Check if email is in description
+    // Last resort: Check if email is in description
     if (task.description?.toLowerCase().includes(email.toLowerCase())) {
       return true;
     }

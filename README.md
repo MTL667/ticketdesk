@@ -162,8 +162,9 @@ Your ClickUp form **MUST** include an email field for tickets to be visible:
 ### How It Works:
 
 The app filters tickets by searching for the user's email in:
-1. **Custom fields** named "email", "e-mail", or containing "email" (case insensitive)
-2. **Description** text (fallback)
+1. **Specific custom field** with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` (highest priority)
+2. **Custom fields** named "email", "e-mail", "contact" or containing "email" (case insensitive fallback)
+3. **Description** text (last resort fallback)
 
 ### Important Notes:
 
