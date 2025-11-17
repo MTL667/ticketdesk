@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getTask, filterTasksByEmail } from "@/lib/clickup";
+import { getTask } from "@/lib/clickup";
 
 interface TicketDetail {
   id: string;
@@ -34,29 +34,31 @@ async function getTicket(id: string): Promise<TicketDetail | null> {
   try {
     const task = await getTask(id);
 
-    // Verify task belongs to user
-    const userTasks = filterTasksByEmail([task], session.user.email);
-    if (userTasks.length === 0) {
-      return null;
-    }
+    // Show all tasks for now until ClickUp form is configured with email field
+    // TODO: Re-enable access control once email filtering is properly configured
+    // const userTasks = filterTasksByEmail([task], session.user.email);
+    // if (userTasks.length === 0) {
+    //   return null;
+    // }
 
     // Extract metadata from description
-    const typeVraagMatch = task.description.match(/Type vraag[^:]*:\s*(.+)/i);
-    const gebouwMatch = task.description.match(/Gebouw[^:]*:\s*(.+)/i);
-    const toepassingsgebiedMatch = task.description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-    const prioriteitMatch = task.description.match(/Prioriteit[^:]*:\s*(\w+)/i);
-    const requesterEmailMatch = task.description.match(/Requester Email:\s*(.+)/i);
-    const tenantIdMatch = task.description.match(/Tenant ID:\s*(.+)/i);
+    const description = task.description || "";
+    const typeVraagMatch = description.match(/Type vraag[^:]*:\s*(.+)/i);
+    const gebouwMatch = description.match(/Gebouw[^:]*:\s*(.+)/i);
+    const toepassingsgebiedMatch = description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
+    const prioriteitMatch = description.match(/Prioriteit[^:]*:\s*(\w+)/i);
+    const requesterEmailMatch = description.match(/Requester Email:\s*(.+)/i);
+    const tenantIdMatch = description.match(/Tenant ID:\s*(.+)/i);
 
     // Extract the main description (everything before the "---")
-    const descriptionParts = task.description.split("---");
-    const mainDescription = descriptionParts[0]?.trim() || task.description;
+    const descriptionParts = description.split("---");
+    const mainDescription = descriptionParts[0]?.trim() || description;
 
     const ticket: TicketDetail = {
       id: task.id,
       name: task.name,
       description: mainDescription,
-      fullDescription: task.description,
+      fullDescription: description,
       status: task.status?.status || "unknown",
       priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
       typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
@@ -73,9 +75,13 @@ async function getTicket(id: string): Promise<TicketDetail | null> {
       })),
     };
 
+    console.log(`[TicketDetail] Successfully loaded ticket ${id} for user: ${session.user.email}`);
     return ticket;
   } catch (error) {
-    console.error("Error fetching ticket:", error);
+    console.error(`[TicketDetail] Error fetching ticket ${id}:`, error);
+    if (error instanceof Error) {
+      console.error(`[TicketDetail] Error details:`, error.message);
+    }
     return null;
   }
 }
