@@ -6,7 +6,8 @@ A production-ready Next.js 15.4 application for managing internal building maint
 
 - **Azure AD Multi-Tenant Authentication**: Secure authentication with Microsoft Entra ID, supporting multiple tenants with tenant validation
 - **ClickUp Integration**: All ticket data is stored and managed through ClickUp API (no database required)
-- **ClickUp Form Integration**: Users create tickets via ClickUp forms - fully customizable in ClickUp
+- **Automatic Email Tracking**: User email is automatically added to tickets for filtering and privacy
+- **Ticket Creation**: Built-in form with priority selection and attachment support
 - **Ticket Viewing**: Users can view their own tickets with status, attachments, and full details
 - **Bilingual Support**: Dutch/French interface
 - **Docker Support**: Ready for containerized deployment
@@ -53,7 +54,6 @@ Required environment variables:
 - `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
 - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for development)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL of the application
-- `NEXT_PUBLIC_CLICKUP_FORM_URL`: URL to your ClickUp form for creating tickets (optional, creates link on homepage)
 
 ### 3. Azure AD Configuration
 
@@ -69,8 +69,13 @@ Required environment variables:
 2. Get the List ID from the ClickUp URL (format: `/v/li/{LIST_ID}`)
 3. Generate an API token in ClickUp Settings > Apps > API
 4. Add the token and List ID to your `.env` file
-5. Create a ClickUp Form for your List (ClickUp Settings > Forms)
-6. Copy the form URL and add it to `NEXT_PUBLIC_CLICKUP_FORM_URL` in your environment
+5. Create a custom field for email tracking:
+   - Go to your ClickUp List settings
+   - Add a custom field with type "Email" or "Text"
+   - Note the field ID (default: `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`)
+   - If you use a different field ID, update `EMAIL_FIELD_ID` in:
+     - `lib/clickup.ts` (filterTasksByEmail function)
+     - `app/api/tickets/route.ts` (POST endpoint)
 
 ### 5. Run Development Server
 
@@ -143,7 +148,9 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 ## Usage
 
 1. **Sign In**: Users from allowed Azure AD tenants can sign in with their Microsoft account
-2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to open the ClickUp form in a new tab
+2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to create a new ticket
+   - Your email address is automatically added for filtering
+   - Fill in subject, description, priority, and optionally upload attachments (max 5 files)
 3. **View Tickets**: Access "Mijn Tickets" to see all tickets associated with your email
 4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
 
@@ -151,17 +158,11 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 
 ⚠️ **Email filtering is ACTIVE** - users only see tickets associated with their email address.
 
-### Requirements:
-
-Your ClickUp form **MUST** include an email field for tickets to be visible:
-
-1. In your ClickUp List, create a custom field named "Email" or "Requester Email" (type: Email or Text)
-2. Add this field to your ClickUp Form and mark it as **Required**
-3. Users must fill in their login email address when submitting tickets
-
 ### How It Works:
 
-The app filters tickets by searching for the user's email in:
+When a user creates a ticket, the application **automatically** adds their email to the ClickUp custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`.
+
+When viewing tickets, the app filters by searching for the user's email in:
 1. **Specific custom field** with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` (highest priority)
 2. **Custom fields** named "email", "e-mail", "contact" or containing "email" (case insensitive fallback)
 3. **Description** text (last resort fallback)
@@ -169,11 +170,9 @@ The app filters tickets by searching for the user's email in:
 ### Important Notes:
 
 - ✅ Users only see tickets with their email address
-- ❌ Tickets without an email are not visible to any user
 - 🔒 This provides privacy - users cannot see each other's tickets
-- 📧 The app shows the user's email on the form page as a reminder
-
-**See `CLICKUP_FORM_SETUP.md` for detailed setup instructions.**
+- ✨ Email tracking is fully automatic - no manual input needed
+- 🔧 Make sure your ClickUp List has the custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` configured
 
 ## Security
 
