@@ -95,20 +95,17 @@ export async function POST(request: NextRequest) {
     // Custom field ID voor email
     const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
 
-    // Custom fields array
-    const customFields = [
-      {
-        id: EMAIL_FIELD_ID,
-        value: email,
-      },
-    ];
-
     // Maak de taak aan in ClickUp
     const task = await createTask({
       name,
       description,
       priority: clickupPriority,
-      customFields,
+      custom_fields: [
+        {
+          id: EMAIL_FIELD_ID,
+          value: email,
+        },
+      ],
     });
 
     console.log(`[POST /api/tickets] Created task ${task.id} with email custom field`);
