@@ -41,8 +41,10 @@ export default async function Home() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          <Link
-            href="/tickets/new"
+          <a
+            href={process.env.NEXT_PUBLIC_CLICKUP_FORM_URL || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
             className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-blue-500"
           >
             <div className="text-center">
@@ -51,10 +53,10 @@ export default async function Home() {
                 Nieuw Ticket Aanmaken
               </h3>
               <p className="text-gray-600">
-                Dien een nieuwe gebouwbeheer aanvraag in
+                Dien een nieuwe gebouwbeheer aanvraag in via ClickUp formulier
               </p>
             </div>
-          </Link>
+          </a>
 
           <Link
             href="/tickets"

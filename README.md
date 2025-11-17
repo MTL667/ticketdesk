@@ -6,10 +6,9 @@ A production-ready Next.js 15.4 application for managing internal building maint
 
 - **Azure AD Multi-Tenant Authentication**: Secure authentication with Microsoft Entra ID, supporting multiple tenants with tenant validation
 - **ClickUp Integration**: All ticket data is stored and managed through ClickUp API (no database required)
-- **Dynamic Custom Fields**: Dropdown options automatically loaded from ClickUp - no code changes needed to update options
-- **Bilingual Support**: Dutch/French interface for all form fields
-- **Ticket Management**: Create, view, and track tickets with full status information
-- **File Attachments**: Upload photos and documents with tickets
+- **ClickUp Form Integration**: Users create tickets via ClickUp forms - fully customizable in ClickUp
+- **Ticket Viewing**: Users can view their own tickets with status, attachments, and full details
+- **Bilingual Support**: Dutch/French interface
 - **Docker Support**: Ready for containerized deployment
 
 ## Tech Stack
@@ -54,8 +53,7 @@ Required environment variables:
 - `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
 - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for development)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL of the application
-
-**Note:** Custom field environment variables (`CLICKUP_FIELD_*`) are no longer required. The app automatically loads dropdown options and field IDs from ClickUp. See `CLICKUP_CUSTOM_FIELDS.md` for details.
+- `NEXT_PUBLIC_CLICKUP_FORM_URL`: URL to your ClickUp form for creating tickets (optional, creates link on homepage)
 
 ### 3. Azure AD Configuration
 
@@ -71,6 +69,8 @@ Required environment variables:
 2. Get the List ID from the ClickUp URL (format: `/v/li/{LIST_ID}`)
 3. Generate an API token in ClickUp Settings > Apps > API
 4. Add the token and List ID to your `.env` file
+5. Create a ClickUp Form for your List (ClickUp Settings > Forms)
+6. Copy the form URL and add it to `NEXT_PUBLIC_CLICKUP_FORM_URL` in your environment
 
 ### 5. Run Development Server
 
@@ -143,9 +143,11 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 ## Usage
 
 1. **Sign In**: Users from allowed Azure AD tenants can sign in with their Microsoft account
-2. **Create Ticket**: Navigate to "Nieuw Ticket Aanmaken" and fill out the bilingual form
-3. **View Tickets**: Access "Mijn Tickets" to see all tickets created by the logged-in user
+2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to open the ClickUp form in a new tab
+3. **View Tickets**: Access "Mijn Tickets" to see all tickets associated with your email
 4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
+
+**Note:** Tickets created via ClickUp forms should include the user's email in a custom field or description to appear in their ticket list.
 
 ## Security
 

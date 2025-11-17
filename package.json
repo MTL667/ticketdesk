@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "get-fields": "tsx scripts/get-custom-fields.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.4.0",
@@ -25,8 +24,7 @@
     "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.18.0",
-    "eslint-config-next": "^15.4.0",
-    "tsx": "^4.7.0"
+    "eslint-config-next": "^15.4.0"
   }
 }
 

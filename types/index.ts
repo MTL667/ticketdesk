@@ -1,16 +1,3 @@
-export interface TicketFormData {
-  typeVraag: string;
-  typeVraagOther?: string;
-  gebouw: string;
-  gebouwOther?: string;
-  toepassingsgebied: string;
-  toepassingsgebiedOther?: string;
-  korteOmschrijving: string;
-  volledigeOmschrijving: string;
-  prioriteit: "urgent" | "high" | "normal" | "low";
-  attachments?: File[];
-}
-
 export interface Ticket {
   id: string;
   name: string;
