@@ -6,6 +6,7 @@ A production-ready Next.js 15.4 application for managing internal building maint
 
 - **Azure AD Multi-Tenant Authentication**: Secure authentication with Microsoft Entra ID, supporting multiple tenants with tenant validation
 - **ClickUp Integration**: All ticket data is stored and managed through ClickUp API (no database required)
+- **Dynamic Custom Fields**: Dropdown options automatically loaded from ClickUp - no code changes needed to update options
 - **Bilingual Support**: Dutch/French interface for all form fields
 - **Ticket Management**: Create, view, and track tickets with full status information
 - **File Attachments**: Upload photos and documents with tickets
@@ -53,6 +54,8 @@ Required environment variables:
 - `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
 - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for development)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL of the application
+
+**Note:** Custom field environment variables (`CLICKUP_FIELD_*`) are no longer required. The app automatically loads dropdown options and field IDs from ClickUp. See `CLICKUP_CUSTOM_FIELDS.md` for details.
 
 ### 3. Azure AD Configuration
 

@@ -193,6 +193,20 @@ export function TicketForm() {
       submitData.append("volledigeOmschrijving", formData.volledigeOmschrijving);
       submitData.append("prioriteit", formData.prioriteit);
 
+      // Send the field IDs so we don't need environment variables
+      if (fieldsData.fieldIds.typeVraag) {
+        submitData.append("fieldIdTypeVraag", fieldsData.fieldIds.typeVraag);
+      }
+      if (fieldsData.fieldIds.gebouw) {
+        submitData.append("fieldIdGebouw", fieldsData.fieldIds.gebouw);
+      }
+      if (fieldsData.fieldIds.toepassingsgebied) {
+        submitData.append("fieldIdToepassingsgebied", fieldsData.fieldIds.toepassingsgebied);
+      }
+      if (fieldsData.fieldIds.requesterEmail) {
+        submitData.append("fieldIdRequesterEmail", fieldsData.fieldIds.requesterEmail);
+      }
+
       files.forEach((file, index) => {
         submitData.append(`attachment_${index}`, file);
       });

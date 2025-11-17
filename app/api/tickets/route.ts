@@ -58,6 +58,12 @@ export async function POST(request: NextRequest) {
     const korteOmschrijving = formData.get("korteOmschrijving") as string;
     const volledigeOmschrijving = formData.get("volledigeOmschrijving") as string;
     const prioriteit = formData.get("prioriteit") as string;
+    
+    // Get field IDs from form data (dynamically loaded from ClickUp)
+    const fieldIdTypeVraag = formData.get("fieldIdTypeVraag") as string | null;
+    const fieldIdGebouw = formData.get("fieldIdGebouw") as string | null;
+    const fieldIdToepassingsgebied = formData.get("fieldIdToepassingsgebied") as string | null;
+    const fieldIdRequesterEmail = formData.get("fieldIdRequesterEmail") as string | null;
 
     // Validate required fields
     if (!typeVraag || !gebouw || !toepassingsgebied || !korteOmschrijving || !volledigeOmschrijving || !prioriteit) {
@@ -98,40 +104,44 @@ Tenant ID: ${session.user.tenantId || "N/A"}
 
     // Note: For dropdown fields in ClickUp, we need to send the option ID or orderindex
     // The form now sends the actual ClickUp option ID/orderindex as the value
-    // So we can use the raw values from the form for dropdown fields
+    // Field IDs come from the form (dynamically loaded) or fall back to environment variables
     
     // Add Type Vraag custom field
-    if (process.env.CLICKUP_FIELD_TYPE_VRAAG) {
+    const typeVraagFieldId = fieldIdTypeVraag || process.env.CLICKUP_FIELD_TYPE_VRAAG;
+    if (typeVraagFieldId) {
       // Use the form value if it looks like a ClickUp ID/orderindex (not a fallback value)
       const isClickUpValue = !["damage", "new", "info", "other"].includes(typeVraag);
       customFields.push({
-        id: process.env.CLICKUP_FIELD_TYPE_VRAAG,
+        id: typeVraagFieldId,
         value: isClickUpValue ? typeVraag : typeVraagDisplay,
       });
     }
 
     // Add Gebouw custom field
-    if (process.env.CLICKUP_FIELD_GEBOUW) {
+    const gebouwFieldId = fieldIdGebouw || process.env.CLICKUP_FIELD_GEBOUW;
+    if (gebouwFieldId) {
       const isClickUpValue = !["strombeek-bever", "destelbergen", "utrecht", "aceg-drive-in", "other"].includes(gebouw);
       customFields.push({
-        id: process.env.CLICKUP_FIELD_GEBOUW,
+        id: gebouwFieldId,
         value: isClickUpValue ? gebouw : gebouwDisplay,
       });
     }
 
     // Add Toepassingsgebied custom field
-    if (process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED) {
+    const toepassingsgebiedFieldId = fieldIdToepassingsgebied || process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED;
+    if (toepassingsgebiedFieldId) {
       const isClickUpValue = !["werkplek", "gebouwschil", "sanitair", "elektriciteit", "keuken", "verwarming", "drank-koffie", "parking", "other"].includes(toepassingsgebied);
       customFields.push({
-        id: process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED,
+        id: toepassingsgebiedFieldId,
         value: isClickUpValue ? toepassingsgebied : toepassingsgebiedDisplay,
       });
     }
 
     // Add Requester Email custom field
-    if (process.env.CLICKUP_FIELD_REQUESTER_EMAIL) {
+    const requesterEmailFieldId = fieldIdRequesterEmail || process.env.CLICKUP_FIELD_REQUESTER_EMAIL;
+    if (requesterEmailFieldId) {
       customFields.push({
-        id: process.env.CLICKUP_FIELD_REQUESTER_EMAIL,
+        id: requesterEmailFieldId,
         value: session.user.email,
       });
     }

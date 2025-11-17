@@ -101,16 +101,33 @@ Field: Type vraag
   ...
 ```
 
-## Stap 3: Environment Variables (Optioneel voor extra features)
+## Stap 3: Environment Variables - VOLLEDIG OPTIONEEL! ⚠️
 
-**Let op:** Environment variables zijn **niet verplicht** voor basis functionaliteit. De app werkt zonder deze variabelen en laadt automatisch de dropdown opties uit ClickUp.
+**Goed nieuws:** Environment variables zijn **NIET MEER NODIG!** 🎉
 
-Deze variabelen zijn alleen nodig als je:
-- Custom field data wilt gebruiken in dashboards
-- Advanced filtering wilt in ClickUp
-- Custom field exports wilt maken
+De app:
+- ✅ Laadt automatisch alle dropdown opties uit ClickUp
+- ✅ Haalt automatisch de field IDs op
+- ✅ Verstuurt data naar de correcte custom fields
+- ✅ Werkt volledig zonder environment variables configuratie
 
-### Lokaal (voor development):
+**Je hoeft NIETS te configureren in environment variables voor custom fields!**
+
+### Waarom staan ze hier dan nog?
+
+De environment variables zijn nu een **legacy fallback** voor:
+- Backwards compatibility met oudere deployments
+- Debugging doeleinden
+- Edge cases waar de API calls falen
+
+**In normale situaties hoef je ze NIET in te stellen.**
+
+### Als je ze TOCH wilt instellen (optioneel):
+
+<details>
+<summary>Klik hier voor instructies (niet aanbevolen)</summary>
+
+#### Lokaal (voor development):
 
 Run `npm run get-fields` om de IDs op te halen, dan voeg toe aan `.env.local`:
 ```bash
@@ -120,13 +137,15 @@ CLICKUP_FIELD_TOEPASSINGSGEBIED=11111111-2222-3333-4444-555555555555
 CLICKUP_FIELD_REQUESTER_EMAIL=99999999-8888-7777-6666-444444444444
 ```
 
-### Productie (Easypanel):
+#### Productie (Easypanel):
 
 1. Ga naar Easypanel dashboard
 2. Selecteer je Ticketdesk app
 3. Ga naar **Environment Variables**
 4. Voeg dezelfde variabelen toe als hierboven
 5. **Rebuild/Restart** de container
+
+</details>
 
 ## Stap 4: Testen
 
