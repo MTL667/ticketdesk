@@ -96,27 +96,35 @@ Tenant ID: ${session.user.tenantId || "N/A"}
     // Build custom fields array for ClickUp
     const customFields: Array<{ id: string; value: string | number }> = [];
 
+    // Note: For dropdown fields in ClickUp, we need to send the option ID or orderindex
+    // The form now sends the actual ClickUp option ID/orderindex as the value
+    // So we can use the raw values from the form for dropdown fields
+    
     // Add Type Vraag custom field
     if (process.env.CLICKUP_FIELD_TYPE_VRAAG) {
+      // Use the form value if it looks like a ClickUp ID/orderindex (not a fallback value)
+      const isClickUpValue = !["damage", "new", "info", "other"].includes(typeVraag);
       customFields.push({
         id: process.env.CLICKUP_FIELD_TYPE_VRAAG,
-        value: typeVraagDisplay,
+        value: isClickUpValue ? typeVraag : typeVraagDisplay,
       });
     }
 
     // Add Gebouw custom field
     if (process.env.CLICKUP_FIELD_GEBOUW) {
+      const isClickUpValue = !["strombeek-bever", "destelbergen", "utrecht", "aceg-drive-in", "other"].includes(gebouw);
       customFields.push({
         id: process.env.CLICKUP_FIELD_GEBOUW,
-        value: gebouwDisplay,
+        value: isClickUpValue ? gebouw : gebouwDisplay,
       });
     }
 
     // Add Toepassingsgebied custom field
     if (process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED) {
+      const isClickUpValue = !["werkplek", "gebouwschil", "sanitair", "elektriciteit", "keuken", "verwarming", "drank-koffie", "parking", "other"].includes(toepassingsgebied);
       customFields.push({
         id: process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED,
-        value: toepassingsgebiedDisplay,
+        value: isClickUpValue ? toepassingsgebied : toepassingsgebiedDisplay,
       });
     }
 

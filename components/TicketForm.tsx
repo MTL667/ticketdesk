@@ -1,13 +1,59 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { TicketFormData } from "@/types";
+
+interface FieldOption {
+  value: string;
+  label: string;
+}
+
+interface FieldsData {
+  typeVraag: FieldOption[];
+  gebouw: FieldOption[];
+  toepassingsgebied: FieldOption[];
+  fieldIds: {
+    typeVraag?: string;
+    gebouw?: string;
+    toepassingsgebied?: string;
+    requesterEmail?: string;
+  };
+}
+
+// Fallback options if API fails
+const FALLBACK_TYPE_VRAAG = [
+  { value: "damage", label: "Schade & problemen / Dommages et problèmes" },
+  { value: "new", label: "Nieuwe vraag / Nouvelle demande" },
+  { value: "info", label: "Informatie / Information" },
+  { value: "other", label: "Andere / Autres" },
+];
+
+const FALLBACK_GEBOUW = [
+  { value: "strombeek-bever", label: "Strombeek-Bever" },
+  { value: "destelbergen", label: "Destelbergen" },
+  { value: "utrecht", label: "Utrecht" },
+  { value: "aceg-drive-in", label: "ACEG Drive-in" },
+  { value: "other", label: "Andere / Autres" },
+];
+
+const FALLBACK_TOEPASSINGSGEBIED = [
+  { value: "werkplek", label: "Werkplek / Lieu de travail" },
+  { value: "gebouwschil", label: "Gebouwschil / Enveloppe du bâtiment" },
+  { value: "sanitair", label: "Sanitair / Sanitaire" },
+  { value: "elektriciteit", label: "Elektriciteit / Électricité" },
+  { value: "keuken", label: "Keuken / Cuisine" },
+  { value: "verwarming", label: "Verwarming / Chauffage" },
+  { value: "drank-koffie", label: "Drank/koffie / Boissons/Café" },
+  { value: "parking", label: "Parking" },
+  { value: "other", label: "Andere / Autres" },
+];
 
 export function TicketForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingFields, setIsLoadingFields] = useState(true);
   const [formData, setFormData] = useState<TicketFormData>({
     typeVraag: "",
     gebouw: "",
@@ -18,6 +64,37 @@ export function TicketForm() {
   });
 
   const [files, setFiles] = useState<File[]>([]);
+  const [fieldsData, setFieldsData] = useState<FieldsData>({
+    typeVraag: FALLBACK_TYPE_VRAAG,
+    gebouw: FALLBACK_GEBOUW,
+    toepassingsgebied: FALLBACK_TOEPASSINGSGEBIED,
+    fieldIds: {},
+  });
+
+  // Load custom fields from ClickUp
+  useEffect(() => {
+    async function loadFields() {
+      try {
+        const response = await fetch("/api/fields");
+        if (response.ok) {
+          const data = await response.json();
+          // Only use ClickUp fields if they have options, otherwise use fallback
+          setFieldsData({
+            typeVraag: data.typeVraag.length > 0 ? data.typeVraag : FALLBACK_TYPE_VRAAG,
+            gebouw: data.gebouw.length > 0 ? data.gebouw : FALLBACK_GEBOUW,
+            toepassingsgebied: data.toepassingsgebied.length > 0 ? data.toepassingsgebied : FALLBACK_TOEPASSINGSGEBIED,
+            fieldIds: data.fieldIds,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load custom fields, using fallback:", err);
+        // Keep using fallback values
+      } finally {
+        setIsLoadingFields(false);
+      }
+    }
+    loadFields();
+  }, []);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -157,12 +234,14 @@ export function TicketForm() {
           onChange={handleInputChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
+          disabled={isLoadingFields}
         >
-          <option value="">Selecteer...</option>
-          <option value="damage">Schade & problemen / Dommages et problèmes</option>
-          <option value="new">Nieuwe vraag / Nouvelle demande</option>
-          <option value="info">Informatie / Information</option>
-          <option value="other">Andere / Autres</option>
+          <option value="">{isLoadingFields ? "Laden..." : "Selecteer..."}</option>
+          {fieldsData.typeVraag.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         {formData.typeVraag === "other" && (
           <input
@@ -188,13 +267,14 @@ export function TicketForm() {
           onChange={handleInputChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
+          disabled={isLoadingFields}
         >
-          <option value="">Selecteer...</option>
-          <option value="strombeek-bever">Strombeek-Bever</option>
-          <option value="destelbergen">Destelbergen</option>
-          <option value="utrecht">Utrecht</option>
-          <option value="aceg-drive-in">ACEG Drive-in</option>
-          <option value="other">Andere / Autres</option>
+          <option value="">{isLoadingFields ? "Laden..." : "Selecteer..."}</option>
+          {fieldsData.gebouw.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         {formData.gebouw === "other" && (
           <input
@@ -220,17 +300,14 @@ export function TicketForm() {
           onChange={handleInputChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
+          disabled={isLoadingFields}
         >
-          <option value="">Selecteer...</option>
-          <option value="werkplek">Werkplek / Lieu de travail</option>
-          <option value="gebouwschil">Gebouwschil / Enveloppe du bâtiment</option>
-          <option value="sanitair">Sanitair / Sanitaire</option>
-          <option value="elektriciteit">Elektriciteit / Électricité</option>
-          <option value="keuken">Keuken / Cuisine</option>
-          <option value="verwarming">Verwarming / Chauffage</option>
-          <option value="drank-koffie">Drank/koffie / Boissons/Café</option>
-          <option value="parking">Parking</option>
-          <option value="other">Andere / Autres</option>
+          <option value="">{isLoadingFields ? "Laden..." : "Selecteer..."}</option>
+          {fieldsData.toepassingsgebied.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         {formData.toepassingsgebied === "other" && (
           <input
