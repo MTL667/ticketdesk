@@ -27,12 +27,21 @@ export default function Loading() {
 
       <style dangerouslySetInnerHTML={{
         __html: `
-          @keyframes rocketLaunch {
-            0%, 100% {
-              transform: translateY(0) rotate(-45deg);
+          @keyframes rocketLoop {
+            0% {
+              transform: translate(0, 0) rotate(-45deg);
+            }
+            25% {
+              transform: translate(30px, -40px) rotate(45deg);
             }
             50% {
-              transform: translateY(-30px) rotate(-45deg);
+              transform: translate(0, -80px) rotate(135deg);
+            }
+            75% {
+              transform: translate(-30px, -40px) rotate(225deg);
+            }
+            100% {
+              transform: translate(0, 0) rotate(315deg);
             }
           }
 
@@ -48,7 +57,7 @@ export default function Loading() {
           }
 
           .rocket-launch {
-            animation: rocketLaunch 1.5s ease-in-out infinite;
+            animation: rocketLoop 3s ease-in-out infinite;
           }
 
           .smoke-float {
