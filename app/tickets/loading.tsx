@@ -27,31 +27,47 @@ export default function Loading() {
 
       <style dangerouslySetInnerHTML={{
         __html: `
-          @keyframes bigRocketLoop {
+          @keyframes smoothRocketLoop {
             0% {
-              transform: translate(0, 0) rotate(-45deg);
+              transform: translate(0px, 0px) rotate(-45deg);
+            }
+            12.5% {
+              transform: translate(106px, -106px) rotate(0deg);
             }
             25% {
               transform: translate(150px, -150px) rotate(45deg);
             }
+            37.5% {
+              transform: translate(106px, -256px) rotate(90deg);
+            }
             50% {
-              transform: translate(0, -300px) rotate(135deg);
+              transform: translate(0px, -300px) rotate(135deg);
+            }
+            62.5% {
+              transform: translate(-106px, -256px) rotate(180deg);
             }
             75% {
               transform: translate(-150px, -150px) rotate(225deg);
             }
+            87.5% {
+              transform: translate(-106px, -106px) rotate(270deg);
+            }
             100% {
-              transform: translate(0, 0) rotate(315deg);
+              transform: translate(0px, 0px) rotate(315deg);
             }
           }
 
           @keyframes smokeTrail {
             0% {
-              transform: translateX(40px) translateY(0) scale(0.5);
-              opacity: 0.8;
+              transform: translateX(-30px) translateY(30px) scale(0.5);
+              opacity: 0.9;
+            }
+            50% {
+              transform: translateX(-50px) translateY(50px) scale(1);
+              opacity: 0.5;
             }
             100% {
-              transform: translateX(60px) translateY(20px) scale(1.2);
+              transform: translateX(-70px) translateY(70px) scale(1.5);
               opacity: 0;
             }
           }
@@ -60,20 +76,22 @@ export default function Loading() {
             position: absolute;
             top: 50%;
             left: 50%;
-            animation: bigRocketLoop 4s ease-in-out infinite;
-            transform-origin: center;
+            animation: smoothRocketLoop 5s linear infinite;
+            transform-origin: 0 0;
           }
 
           .smoke-trail {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 12px;
+            left: 12px;
+            pointer-events: none;
           }
 
           .smoke-particle {
             position: absolute;
-            font-size: 28px;
-            animation: smokeTrail 0.8s ease-out infinite;
+            font-size: 24px;
+            animation: smokeTrail 1s ease-out infinite;
+            transform-origin: center;
           }
         `
       }} />
