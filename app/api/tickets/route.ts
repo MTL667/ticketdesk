@@ -93,12 +93,48 @@ Requester Email: ${session.user.email}
 Tenant ID: ${session.user.tenantId || "N/A"}
     `.trim();
 
+    // Build custom fields array for ClickUp
+    const customFields: Array<{ id: string; value: string | number }> = [];
+
+    // Add Type Vraag custom field
+    if (process.env.CLICKUP_FIELD_TYPE_VRAAG) {
+      customFields.push({
+        id: process.env.CLICKUP_FIELD_TYPE_VRAAG,
+        value: typeVraagDisplay,
+      });
+    }
+
+    // Add Gebouw custom field
+    if (process.env.CLICKUP_FIELD_GEBOUW) {
+      customFields.push({
+        id: process.env.CLICKUP_FIELD_GEBOUW,
+        value: gebouwDisplay,
+      });
+    }
+
+    // Add Toepassingsgebied custom field
+    if (process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED) {
+      customFields.push({
+        id: process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED,
+        value: toepassingsgebiedDisplay,
+      });
+    }
+
+    // Add Requester Email custom field
+    if (process.env.CLICKUP_FIELD_REQUESTER_EMAIL) {
+      customFields.push({
+        id: process.env.CLICKUP_FIELD_REQUESTER_EMAIL,
+        value: session.user.email,
+      });
+    }
+
     // Create task in ClickUp
     const taskData = {
       name: korteOmschrijving,
       description: description,
       priority: PRIORITY_MAP[prioriteit] || 3,
       status: "to do",
+      custom_fields: customFields.length > 0 ? customFields : undefined,
     };
 
     const createdTask = await createTask(taskData);
