@@ -191,6 +191,9 @@ export default async function TicketsPage() {
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
+                      <p>
+                        <span className="font-medium">ClickUp ID:</span> <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{ticket.id}</span>
+                      </p>
                       {ticket.typeVraag && (
                         <p>
                           <span className="font-medium">Type:</span> {ticket.typeVraag}

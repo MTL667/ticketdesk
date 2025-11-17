@@ -230,6 +230,10 @@ export default async function TicketDetailPage({
                 Ticket Details
               </h2>
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <dt className="font-medium text-gray-700">ClickUp ID</dt>
+                <dd className="text-gray-900">
+                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{ticket.id}</span>
+                </dd>
                 {ticket.typeVraag && (
                   <>
                     <dt className="font-medium text-gray-700">Type vraag / Type de demande</dt>
