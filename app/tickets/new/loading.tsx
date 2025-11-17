@@ -1,17 +1,17 @@
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center overflow-hidden">
       <div className="text-center">
-        <div className="relative inline-block h-[150px] w-[100px]">
-          {/* Raket animatie */}
-          <div className="absolute top-0 left-1/2 text-6xl rocket-launch">
-            🚀
-          </div>
-          {/* Rook/vuur effect */}
-          <div className="absolute top-[60px] left-1/2 -translate-x-1/2">
-            <div className="absolute -left-[10px] text-2xl smoke-float" style={{ animationDelay: '0s' }}>💨</div>
-            <div className="absolute left-[5px] text-2xl smoke-float" style={{ animationDelay: '0.3s' }}>💨</div>
-            <div className="absolute -left-[5px] text-2xl smoke-float" style={{ animationDelay: '0.6s' }}>💨</div>
+        <div className="relative inline-block h-[400px] w-[400px]">
+          {/* Raket + Rook container (zo blijven ze samen) */}
+          <div className="rocket-with-smoke">
+            <div className="text-6xl">🚀</div>
+            {/* Rook blijft achter raket */}
+            <div className="smoke-trail">
+              <div className="smoke-particle" style={{ animationDelay: '0s' }}>💨</div>
+              <div className="smoke-particle" style={{ animationDelay: '0.15s' }}>💨</div>
+              <div className="smoke-particle" style={{ animationDelay: '0.3s' }}>💨</div>
+            </div>
           </div>
         </div>
         
@@ -27,41 +27,53 @@ export default function Loading() {
 
       <style dangerouslySetInnerHTML={{
         __html: `
-          @keyframes rocketLoop {
+          @keyframes bigRocketLoop {
             0% {
               transform: translate(0, 0) rotate(-45deg);
             }
             25% {
-              transform: translate(30px, -40px) rotate(45deg);
+              transform: translate(150px, -150px) rotate(45deg);
             }
             50% {
-              transform: translate(0, -80px) rotate(135deg);
+              transform: translate(0, -300px) rotate(135deg);
             }
             75% {
-              transform: translate(-30px, -40px) rotate(225deg);
+              transform: translate(-150px, -150px) rotate(225deg);
             }
             100% {
               transform: translate(0, 0) rotate(315deg);
             }
           }
 
-          @keyframes smokeFloat {
+          @keyframes smokeTrail {
             0% {
-              transform: translateY(0) translateX(0) scale(1);
-              opacity: 0.7;
+              transform: translateX(40px) translateY(0) scale(0.5);
+              opacity: 0.8;
             }
             100% {
-              transform: translateY(40px) translateX(-10px) scale(1.5);
+              transform: translateX(60px) translateY(20px) scale(1.2);
               opacity: 0;
             }
           }
 
-          .rocket-launch {
-            animation: rocketLoop 3s ease-in-out infinite;
+          .rocket-with-smoke {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            animation: bigRocketLoop 4s ease-in-out infinite;
+            transform-origin: center;
           }
 
-          .smoke-float {
-            animation: smokeFloat 1.2s ease-out infinite;
+          .smoke-trail {
+            position: absolute;
+            top: 0;
+            left: 0;
+          }
+
+          .smoke-particle {
+            position: absolute;
+            font-size: 28px;
+            animation: smokeTrail 0.8s ease-out infinite;
           }
         `
       }} />
