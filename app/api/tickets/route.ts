@@ -102,46 +102,54 @@ Tenant ID: ${session.user.tenantId || "N/A"}
     // Build custom fields array for ClickUp
     const customFields: Array<{ id: string; value: string | number }> = [];
 
+    // Helper function to validate field ID (ignore placeholders from documentation)
+    const isValidFieldId = (id: string | null | undefined): boolean => {
+      if (!id) return false;
+      // Ignore placeholder values from documentation
+      if (id.includes('<') || id.includes('>') || id.includes('jouw_id_hier')) return false;
+      return true;
+    };
+
     // Note: For dropdown fields in ClickUp, we need to send the option ID or orderindex
     // The form now sends the actual ClickUp option ID/orderindex as the value
     // Field IDs come from the form (dynamically loaded) or fall back to environment variables
     
     // Add Type Vraag custom field
     const typeVraagFieldId = fieldIdTypeVraag || process.env.CLICKUP_FIELD_TYPE_VRAAG;
-    if (typeVraagFieldId) {
+    if (isValidFieldId(typeVraagFieldId)) {
       // Use the form value if it looks like a ClickUp ID/orderindex (not a fallback value)
       const isClickUpValue = !["damage", "new", "info", "other"].includes(typeVraag);
       customFields.push({
-        id: typeVraagFieldId,
+        id: typeVraagFieldId!,
         value: isClickUpValue ? typeVraag : typeVraagDisplay,
       });
     }
 
     // Add Gebouw custom field
     const gebouwFieldId = fieldIdGebouw || process.env.CLICKUP_FIELD_GEBOUW;
-    if (gebouwFieldId) {
+    if (isValidFieldId(gebouwFieldId)) {
       const isClickUpValue = !["strombeek-bever", "destelbergen", "utrecht", "aceg-drive-in", "other"].includes(gebouw);
       customFields.push({
-        id: gebouwFieldId,
+        id: gebouwFieldId!,
         value: isClickUpValue ? gebouw : gebouwDisplay,
       });
     }
 
     // Add Toepassingsgebied custom field
     const toepassingsgebiedFieldId = fieldIdToepassingsgebied || process.env.CLICKUP_FIELD_TOEPASSINGSGEBIED;
-    if (toepassingsgebiedFieldId) {
+    if (isValidFieldId(toepassingsgebiedFieldId)) {
       const isClickUpValue = !["werkplek", "gebouwschil", "sanitair", "elektriciteit", "keuken", "verwarming", "drank-koffie", "parking", "other"].includes(toepassingsgebied);
       customFields.push({
-        id: toepassingsgebiedFieldId,
+        id: toepassingsgebiedFieldId!,
         value: isClickUpValue ? toepassingsgebied : toepassingsgebiedDisplay,
       });
     }
 
     // Add Requester Email custom field
     const requesterEmailFieldId = fieldIdRequesterEmail || process.env.CLICKUP_FIELD_REQUESTER_EMAIL;
-    if (requesterEmailFieldId) {
+    if (isValidFieldId(requesterEmailFieldId)) {
       customFields.push({
-        id: requesterEmailFieldId,
+        id: requesterEmailFieldId!,
         value: session.user.email,
       });
     }
