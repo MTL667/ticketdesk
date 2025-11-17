@@ -147,7 +147,25 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 3. **View Tickets**: Access "Mijn Tickets" to see all tickets associated with your email
 4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
 
-**Note:** Tickets created via ClickUp forms should include the user's email in a custom field or description to appear in their ticket list.
+## Ticket Filtering Configuration
+
+By default, the app shows **all tickets** from the ClickUp list. To enable per-user filtering:
+
+### Option 1: Add Email Custom Field to ClickUp Form (Recommended)
+
+1. In your ClickUp List, create a custom field named "Email" or "Requester Email" (type: Email or Text)
+2. Add this field to your ClickUp Form
+3. Users must fill in their email address when submitting tickets
+4. Uncomment the filtering line in `app/api/tickets/route.ts`:
+   ```typescript
+   const userTasks = filterTasksByEmail(tasks, session.user.email);
+   ```
+
+### Option 2: Email in Description
+
+Alternatively, ensure user emails are included in the ticket description. The app will automatically detect them.
+
+**Current Status:** All users can see all tickets until email filtering is configured.
 
 ## Security
 
