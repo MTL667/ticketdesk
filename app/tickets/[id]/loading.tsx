@@ -1,4 +1,10 @@
+"use client";
+
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export default function Loading() {
+  const { t } = useLanguage();
+  
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
@@ -12,13 +18,13 @@ export default function Loading() {
             <span className="smoke-3">💨</span>
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <p className="text-xl font-semibold text-gray-700 animate-pulse">
-            Ticket wordt geladen...
+            {t("loadingTickets")}
           </p>
           <p className="text-sm text-gray-500">
-            Even geduld, we halen de details op 🎫
+            {t("loadingSubtext")}
           </p>
         </div>
       </div>

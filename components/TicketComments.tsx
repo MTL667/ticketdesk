@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Comment {
   id: string;
@@ -21,6 +22,7 @@ interface TicketCommentsProps {
 }
 
 export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
+  const { t } = useLanguage();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -95,10 +97,10 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Zojuist";
-    if (diffMins < 60) return `${diffMins} minuten geleden`;
-    if (diffHours < 24) return `${diffHours} uur geleden`;
-    if (diffDays < 7) return `${diffDays} dagen geleden`;
+    if (diffMins < 1) return t("justNow");
+    if (diffMins < 60) return `${diffMins} ${t("minutesAgo")}`;
+    if (diffHours < 24) return `${diffHours} ${t("hoursAgo")}`;
+    if (diffDays < 7) return `${diffDays} ${t("daysAgo")}`;
     
     return date.toLocaleDateString("nl-NL", {
       day: "numeric",
@@ -138,7 +140,7 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
       <div className="border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            💬 Berichten
+            💬 {t("messages")}
             {comments.length > 0 && (
               <span className="text-sm font-normal text-gray-500">
                 ({comments.length})
@@ -149,9 +151,9 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
             onClick={fetchComments}
             disabled={isLoading}
             className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
-            title="Ververs berichten"
+            title={t("refresh")}
           >
-            🔄 Ververs
+            🔄 {t("refresh")}
           </button>
         </div>
       </div>
@@ -160,13 +162,13 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
       <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
         {isLoading && comments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <div className="animate-pulse">Berichten laden...</div>
+            <div className="animate-pulse">{t("loadingMessages")}</div>
           </div>
         ) : comments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p className="mb-2">💬</p>
-            <p>Nog geen berichten.</p>
-            <p className="text-sm">Stel een vraag of laat een bericht achter!</p>
+            <p>{t("noMessages")}</p>
+            <p className="text-sm">{t("noMessagesHelp")}</p>
           </div>
         ) : (
           comments.map((comment) => {
@@ -194,10 +196,10 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
                 </div>
 
                 {/* Message */}
-                <div className={`flex-1 ${isCurrentUser ? "text-right" : ""}`}>
+                  <div className={`flex-1 ${isCurrentUser ? "text-right" : ""}`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className={`font-medium text-sm text-gray-900 ${isCurrentUser ? "order-2" : ""}`}>
-                      {isCurrentUser ? "Jij" : (comment.user?.username || "Gebruiker")}
+                      {isCurrentUser ? t("you") : (comment.user?.username || t("user"))}
                     </span>
                     <span className={`text-xs text-gray-500 ${isCurrentUser ? "order-1" : ""}`}>
                       {formatDate(comment.date)}
@@ -238,7 +240,7 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
             type="text"
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Typ een bericht..."
+            placeholder={t("typeMessage")}
             disabled={isSubmitting}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           />
@@ -247,11 +249,11 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
             disabled={isSubmitting || !newComment.trim()}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {isSubmitting ? "..." : "Verzenden"}
+            {isSubmitting ? "..." : t("send")}
           </button>
         </form>
         <p className="text-xs text-gray-500 mt-2">
-          💡 Je bericht wordt verzonden naar alle betrokkenen bij dit ticket
+          💡 {t("messageNotification")}
         </p>
       </div>
     </div>
