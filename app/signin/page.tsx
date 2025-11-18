@@ -14,7 +14,7 @@ export default async function SignInPage({
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Gebouwbeheer Ticket Portal
+            ServiceDesk
           </h2>
           <p className="text-gray-600 mb-8">
             Meld u aan met uw Microsoft-account

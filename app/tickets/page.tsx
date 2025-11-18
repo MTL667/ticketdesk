@@ -29,21 +29,12 @@ async function getTickets(): Promise<Ticket[]> {
 
     // Map to ticket format
     const tickets: Ticket[] = userTasks.map((task) => {
-      // Extract metadata from description
-      const typeVraagMatch = task.description?.match(/Type vraag[^:]*:\s*(.+)/i);
-      const gebouwMatch = task.description?.match(/Gebouw[^:]*:\s*(.+)/i);
-      const toepassingsgebiedMatch = task.description?.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-      const prioriteitMatch = task.description?.match(/Prioriteit[^:]*:\s*(\w+)/i);
-
       return {
         id: task.id,
         name: task.name,
         description: task.description || "",
         status: task.status?.status || "unknown",
-        priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
-        typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
-        gebouw: gebouwMatch ? gebouwMatch[1].trim() : undefined,
-        toepassingsgebied: toepassingsgebiedMatch ? toepassingsgebiedMatch[1].trim() : undefined,
+        priority: task.priority?.priority || "normal",
         dateCreated: task.date_created,
         dateUpdated: task.date_updated,
         attachments: task.attachments?.map((att) => ({
@@ -80,7 +71,7 @@ export default async function TicketsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-              Gebouwbeheer Ticket Portal
+              ServiceDesk
             </Link>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">{session.user?.email}</span>

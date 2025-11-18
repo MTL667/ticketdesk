@@ -17,21 +17,12 @@ export async function GET(request: NextRequest) {
 
     // Map to ticket format
     const tickets = userTasks.map((task) => {
-      // Extract metadata from description
-      const typeVraagMatch = task.description.match(/Type vraag[^:]*:\s*(.+)/i);
-      const gebouwMatch = task.description.match(/Gebouw[^:]*:\s*(.+)/i);
-      const toepassingsgebiedMatch = task.description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-      const prioriteitMatch = task.description.match(/Prioriteit[^:]*:\s*(\w+)/i);
-
       return {
         id: task.id,
         name: task.name,
         description: task.description,
         status: task.status?.status || "unknown",
-        priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
-        typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
-        gebouw: gebouwMatch ? gebouwMatch[1].trim() : undefined,
-        toepassingsgebied: toepassingsgebiedMatch ? toepassingsgebiedMatch[1].trim() : undefined,
+        priority: task.priority?.priority || "normal",
         dateCreated: task.date_created,
         dateUpdated: task.date_updated,
         attachments: task.attachments?.map((att) => ({

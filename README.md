@@ -1,6 +1,6 @@
-# Gebouwbeheer Ticket Portal
+# ServiceDesk
 
-A production-ready Next.js 15.4 application for managing internal building maintenance tickets, integrated with ClickUp and authenticated via Microsoft Entra ID (Azure AD).
+A production-ready Next.js 15.4 application for managing internal support tickets, integrated with ClickUp and authenticated via Microsoft Entra ID (Azure AD).
 
 ## Features
 

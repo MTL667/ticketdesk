@@ -15,7 +15,7 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-xl font-semibold text-gray-900">
-              Gebouwbeheer Ticket Portal
+              ServiceDesk
             </h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">{session.user?.email}</span>
@@ -33,10 +33,10 @@ export default async function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Welkom bij het Gebouwbeheer Ticket Systeem
+            Welkom bij ServiceDesk
           </h2>
           <p className="text-gray-600">
-            Maak een nieuwe ticket aan of bekijk uw bestaande tickets.
+            Maak een nieuw ticket aan of bekijk uw bestaande tickets.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default async function Home() {
                 Nieuw Ticket Aanmaken
               </h3>
               <p className="text-gray-600">
-                Dien een nieuwe gebouwbeheer aanvraag in via ClickUp formulier
+                Dien een nieuwe aanvraag in via het ClickUp formulier
               </p>
             </div>
           </Link>

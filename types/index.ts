@@ -4,9 +4,6 @@ export interface Ticket {
   description: string;
   status: string;
   priority?: string;
-  typeVraag?: string;
-  gebouw?: string;
-  toepassingsgebied?: string;
   dateCreated: string;
   dateUpdated: string;
   attachments?: Array<{

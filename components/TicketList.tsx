@@ -189,22 +189,6 @@ export function TicketList({ tickets }: TicketListProps) {
                           {ticket.id}
                         </span>
                       </p>
-                      {ticket.typeVraag && (
-                        <p>
-                          <span className="font-medium">Type:</span> {ticket.typeVraag}
-                        </p>
-                      )}
-                      {ticket.gebouw && (
-                        <p>
-                          <span className="font-medium">Gebouw:</span> {ticket.gebouw}
-                        </p>
-                      )}
-                      {ticket.toepassingsgebied && (
-                        <p>
-                          <span className="font-medium">Toepassingsgebied:</span>{" "}
-                          {ticket.toepassingsgebied}
-                        </p>
-                      )}
                       <p>
                         <span className="font-medium">Aangemaakt:</span>{" "}
                         {formatDate(ticket.dateCreated)}

@@ -10,11 +10,6 @@ interface TicketDetail {
   fullDescription: string;
   status: string;
   priority: string;
-  typeVraag?: string;
-  gebouw?: string;
-  toepassingsgebied?: string;
-  requesterEmail?: string;
-  tenantId?: string;
   dateCreated: string;
   dateUpdated: string;
   attachments?: Array<{
@@ -41,31 +36,16 @@ async function getTicket(id: string): Promise<TicketDetail | null> {
       return null;
     }
 
-    // Extract metadata from description
+    // Extract the description
     const description = task.description || "";
-    const typeVraagMatch = description.match(/Type vraag[^:]*:\s*(.+)/i);
-    const gebouwMatch = description.match(/Gebouw[^:]*:\s*(.+)/i);
-    const toepassingsgebiedMatch = description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-    const prioriteitMatch = description.match(/Prioriteit[^:]*:\s*(\w+)/i);
-    const requesterEmailMatch = description.match(/Requester Email:\s*(.+)/i);
-    const tenantIdMatch = description.match(/Tenant ID:\s*(.+)/i);
-
-    // Extract the main description (everything before the "---")
-    const descriptionParts = description.split("---");
-    const mainDescription = descriptionParts[0]?.trim() || description;
 
     const ticket: TicketDetail = {
       id: task.id,
       name: task.name,
-      description: mainDescription,
+      description: description,
       fullDescription: description,
       status: task.status?.status || "unknown",
-      priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
-      typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
-      gebouw: gebouwMatch ? gebouwMatch[1].trim() : undefined,
-      toepassingsgebied: toepassingsgebiedMatch ? toepassingsgebiedMatch[1].trim() : undefined,
-      requesterEmail: requesterEmailMatch ? requesterEmailMatch[1].trim() : undefined,
-      tenantId: tenantIdMatch ? tenantIdMatch[1].trim() : undefined,
+      priority: task.priority?.priority || "normal",
       dateCreated: task.date_created,
       dateUpdated: task.date_updated,
       attachments: task.attachments?.map((att) => ({
@@ -156,7 +136,7 @@ export default async function TicketDetailPage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-                Gebouwbeheer Ticket Portal
+                ServiceDesk
               </Link>
             </div>
           </div>
@@ -185,7 +165,7 @@ export default async function TicketDetailPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-              Gebouwbeheer Ticket Portal
+              ServiceDesk
             </Link>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">{session.user?.email}</span>
@@ -234,25 +214,7 @@ export default async function TicketDetailPage({
                 <dd className="text-gray-900">
                   <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{ticket.id}</span>
                 </dd>
-                {ticket.typeVraag && (
-                  <>
-                    <dt className="font-medium text-gray-700">Type vraag / Type de demande</dt>
-                    <dd className="text-gray-900">{ticket.typeVraag}</dd>
-                  </>
-                )}
-                {ticket.gebouw && (
-                  <>
-                    <dt className="font-medium text-gray-700">Gebouw / Bâtiment</dt>
-                    <dd className="text-gray-900">{ticket.gebouw}</dd>
-                  </>
-                )}
-                {ticket.toepassingsgebied && (
-                  <>
-                    <dt className="font-medium text-gray-700">Toepassingsgebied / Application</dt>
-                    <dd className="text-gray-900">{ticket.toepassingsgebied}</dd>
-                  </>
-                )}
-                <dt className="font-medium text-gray-700">Prioriteit / Priorité</dt>
+                <dt className="font-medium text-gray-700">Prioriteit</dt>
                 <dd className="text-gray-900 capitalize">{ticket.priority}</dd>
                 <dt className="font-medium text-gray-700">Status</dt>
                 <dd className="text-gray-900">{ticket.status}</dd>
@@ -266,7 +228,7 @@ export default async function TicketDetailPage({
             {/* Description */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Volledige Omschrijving / Description Complète
+                Omschrijving
               </h2>
               <div className="prose max-w-none">
                 <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
@@ -277,7 +239,7 @@ export default async function TicketDetailPage({
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Bijlagen / Pièces Jointes
+                  Bijlagen
                 </h2>
                 <div className="space-y-2">
                   {ticket.attachments.map((attachment) => (
