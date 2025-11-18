@@ -1,21 +1,19 @@
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
-        <div className="relative inline-block h-[400px] w-[400px]">
-          {/* Raket + Rook container (zo blijven ze samen) */}
-          <div className="rocket-with-smoke">
-            <div className="text-6xl">🚀</div>
-            {/* Rook blijft achter raket */}
-            <div className="smoke-trail">
-              <div className="smoke-particle" style={{ animationDelay: '0s' }}>💨</div>
-              <div className="smoke-particle" style={{ animationDelay: '0.15s' }}>💨</div>
-              <div className="smoke-particle" style={{ animationDelay: '0.3s' }}>💨</div>
-            </div>
+        <div className="relative inline-block h-[80px] w-[200px] mb-8">
+          {/* Raket vliegt horizontaal */}
+          <div className="rocket-flying">
+            <span className="text-4xl">🚀</span>
+            {/* Rook achter raket */}
+            <span className="smoke-1">💨</span>
+            <span className="smoke-2">💨</span>
+            <span className="smoke-3">💨</span>
           </div>
         </div>
         
-        <div className="mt-8 space-y-2">
+        <div className="space-y-2">
           <p className="text-xl font-semibold text-gray-700 animate-pulse">
             Tickets worden geladen...
           </p>
@@ -27,71 +25,53 @@ export default function Loading() {
 
       <style dangerouslySetInnerHTML={{
         __html: `
-          @keyframes smoothRocketLoop {
+          @keyframes flyHorizontal {
             0% {
-              transform: translate(0px, 0px) rotate(-45deg);
-            }
-            12.5% {
-              transform: translate(106px, -106px) rotate(0deg);
-            }
-            25% {
-              transform: translate(150px, -150px) rotate(45deg);
-            }
-            37.5% {
-              transform: translate(106px, -256px) rotate(90deg);
-            }
-            50% {
-              transform: translate(0px, -300px) rotate(135deg);
-            }
-            62.5% {
-              transform: translate(-106px, -256px) rotate(180deg);
-            }
-            75% {
-              transform: translate(-150px, -150px) rotate(225deg);
-            }
-            87.5% {
-              transform: translate(-106px, -106px) rotate(270deg);
+              transform: translateX(-220px);
             }
             100% {
-              transform: translate(0px, 0px) rotate(315deg);
+              transform: translateX(220px);
             }
           }
 
-          @keyframes smokeTrail {
+          @keyframes smokeFade {
             0% {
-              transform: translateX(-30px) translateY(30px) scale(0.5);
-              opacity: 0.9;
-            }
-            50% {
-              transform: translateX(-50px) translateY(50px) scale(1);
-              opacity: 0.5;
+              opacity: 0.8;
+              transform: translateX(0) scale(0.8);
             }
             100% {
-              transform: translateX(-70px) translateY(70px) scale(1.5);
               opacity: 0;
+              transform: translateX(-30px) scale(1.2);
             }
           }
 
-          .rocket-with-smoke {
+          .rocket-flying {
             position: absolute;
-            top: 50%;
             left: 50%;
-            animation: smoothRocketLoop 5s linear infinite;
-            transform-origin: 0 0;
+            top: 50%;
+            animation: flyHorizontal 2s linear infinite;
+            display: flex;
+            align-items: center;
+            gap: 8px;
           }
 
-          .smoke-trail {
+          .rocket-flying span[class^="smoke-"] {
             position: absolute;
-            top: 12px;
-            left: 12px;
-            pointer-events: none;
+            left: -20px;
+            font-size: 20px;
+            animation: smokeFade 0.6s ease-out infinite;
           }
 
-          .smoke-particle {
-            position: absolute;
-            font-size: 24px;
-            animation: smokeTrail 1s ease-out infinite;
-            transform-origin: center;
+          .smoke-1 {
+            animation-delay: 0s;
+          }
+
+          .smoke-2 {
+            animation-delay: 0.2s;
+          }
+
+          .smoke-3 {
+            animation-delay: 0.4s;
           }
         `
       }} />

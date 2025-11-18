@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Ticket } from "@/types";
 import { getTasks, filterTasksByEmail } from "@/lib/clickup";
+import { TicketList } from "@/components/TicketList";
 
 async function getTickets(): Promise<Ticket[]> {
   const session = await auth();
@@ -64,55 +65,6 @@ async function getTickets(): Promise<Ticket[]> {
   }
 }
 
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(parseInt(dateString));
-    return new Intl.DateTimeFormat("nl-BE", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}
-
-function getStatusColor(status: string): string {
-  const statusLower = status.toLowerCase();
-  if (statusLower.includes("done") || statusLower.includes("complete")) {
-    return "bg-green-100 text-green-800";
-  }
-  if (statusLower.includes("progress") || statusLower.includes("doing")) {
-    return "bg-blue-100 text-blue-800";
-  }
-  if (statusLower.includes("waiting") || statusLower.includes("pending")) {
-    return "bg-yellow-100 text-yellow-800";
-  }
-  if (statusLower.includes("closed") || statusLower.includes("cancel")) {
-    return "bg-gray-100 text-gray-800";
-  }
-  return "bg-gray-100 text-gray-800";
-}
-
-function getPriorityColor(priority: string): string {
-  const priorityLower = priority.toLowerCase();
-  if (priorityLower === "urgent") {
-    return "bg-red-100 text-red-800";
-  }
-  if (priorityLower === "high") {
-    return "bg-orange-100 text-orange-800";
-  }
-  if (priorityLower === "normal") {
-    return "bg-blue-100 text-blue-800";
-  }
-  if (priorityLower === "low") {
-    return "bg-gray-100 text-gray-800";
-  }
-  return "bg-gray-100 text-gray-800";
-}
-
 export default async function TicketsPage() {
   const session = await auth();
 
@@ -154,74 +106,7 @@ export default async function TicketsPage() {
           </Link>
         </div>
 
-        {tickets.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">Er zijn nog geen tickets gevonden.</p>
-              <p className="text-sm text-gray-500">
-                Controleer of er tickets in de ClickUp list staan en of de CLICKUP_LIST_ID correct is ingesteld.
-              </p>
-            </div>
-            <Link
-              href="/tickets/new"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Maak uw eerste ticket aan →
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tickets.map((ticket) => (
-              <Link
-                key={ticket.id}
-                href={`/tickets/${ticket.id}`}
-                className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                      {ticket.name}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                        {ticket.status}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(ticket.priority || "normal")}`}>
-                        {ticket.priority || "normal"}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>
-                        <span className="font-medium">ClickUp ID:</span> <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{ticket.id}</span>
-                      </p>
-                      {ticket.typeVraag && (
-                        <p>
-                          <span className="font-medium">Type:</span> {ticket.typeVraag}
-                        </p>
-                      )}
-                      {ticket.gebouw && (
-                        <p>
-                          <span className="font-medium">Gebouw:</span> {ticket.gebouw}
-                        </p>
-                      )}
-                      {ticket.toepassingsgebied && (
-                        <p>
-                          <span className="font-medium">Toepassingsgebied:</span> {ticket.toepassingsgebied}
-                        </p>
-                      )}
-                      <p>
-                        <span className="font-medium">Aangemaakt:</span> {formatDate(ticket.dateCreated)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <span className="text-gray-400">→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <TicketList tickets={tickets} />
       </main>
     </div>
   );
