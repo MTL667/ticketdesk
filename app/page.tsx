@@ -1,9 +1,34 @@
-import { auth } from "@/lib/auth";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
-export default async function Home() {
-  const session = await auth();
+export default function Home() {
+  const { data: session, status } = useSession();
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (status !== "loading") {
+      setIsLoading(false);
+    }
+  }, [status]);
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse text-xl font-semibold text-gray-700">
+            {t("loadingTickets")}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     redirect("/signin");
@@ -15,15 +40,16 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-xl font-semibold text-gray-900">
-              ServiceDesk
+              {t("servicedesk")}
             </h1>
             <div className="flex items-center gap-4">
+              <LanguageSelector />
               <span className="text-sm text-gray-600">{session.user?.email}</span>
               <Link
                 href="/api/auth/signout"
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Uitloggen
+                {t("logout")}
               </Link>
             </div>
           </div>
@@ -33,10 +59,10 @@ export default async function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Welkom bij ServiceDesk
+            {t("welcome")}
           </h2>
           <p className="text-gray-600">
-            Maak een nieuw ticket aan of bekijk uw bestaande tickets.
+            {t("welcomeDescription")}
           </p>
         </div>
 
@@ -48,10 +74,10 @@ export default async function Home() {
             <div className="text-center">
               <div className="text-4xl mb-4">➕</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Nieuw Ticket Aanmaken
+                {t("newTicket")}
               </h3>
               <p className="text-gray-600">
-                Dien een nieuwe aanvraag in via het ClickUp formulier
+                {t("newTicketDescription")}
               </p>
             </div>
           </Link>
@@ -63,10 +89,10 @@ export default async function Home() {
             <div className="text-center">
               <div className="text-4xl mb-4">📋</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Mijn Tickets
+                {t("myTickets")}
               </h3>
               <p className="text-gray-600">
-                Bekijk al uw bestaande tickets en hun status
+                {t("myTicketsDescription")}
               </p>
             </div>
           </Link>

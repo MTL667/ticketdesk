@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Ticket } from "@/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TicketListProps {
   tickets: Ticket[];
@@ -58,6 +59,7 @@ function getPriorityColor(priority: string): string {
 }
 
 export function TicketList({ tickets }: TicketListProps) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
@@ -185,20 +187,20 @@ export function TicketList({ tickets }: TicketListProps) {
                     <div className="text-sm text-gray-600 space-y-1">
                       {ticket.ticketId && (
                         <p>
-                          <span className="font-medium">Ticket ID:</span>{" "}
+                          <span className="font-medium">{t("ticketId")}:</span>{" "}
                           <span className="font-mono text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
                             {ticket.ticketId}
                           </span>
                         </p>
                       )}
                       <p>
-                        <span className="font-medium">ClickUp ID:</span>{" "}
+                        <span className="font-medium">{t("clickupId")}:</span>{" "}
                         <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
                           {ticket.id}
                         </span>
                       </p>
                       <p>
-                        <span className="font-medium">Aangemaakt:</span>{" "}
+                        <span className="font-medium">{t("created")}:</span>{" "}
                         {formatDate(ticket.dateCreated)}
                       </p>
                     </div>
