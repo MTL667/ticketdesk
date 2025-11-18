@@ -6,8 +6,9 @@ A production-ready Next.js 15.4 application for managing internal building maint
 
 - **Azure AD Multi-Tenant Authentication**: Secure authentication with Microsoft Entra ID, supporting multiple tenants with tenant validation
 - **ClickUp Integration**: All ticket data is stored and managed through ClickUp API (no database required)
-- **Automatic Email Tracking**: User email is automatically added to tickets for filtering and privacy
-- **Ticket Creation**: Built-in form with priority selection and attachment support
+- **ClickUp Form Integration**: Create tickets via ClickUp forms with automatic email pre-filling
+- **Pagination & Search**: Browse tickets 10 at a time with instant search functionality
+- **Automatic Email Tracking**: User email is automatically pre-filled in ClickUp forms for filtering
 - **Ticket Viewing**: Users can view their own tickets with status, attachments, and full details
 - **Bilingual Support**: Dutch/French interface
 - **Docker Support**: Ready for containerized deployment
@@ -54,6 +55,7 @@ Required environment variables:
 - `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
 - `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for development)
 - `NEXT_PUBLIC_BASE_URL`: Public base URL of the application
+- `NEXT_PUBLIC_CLICKUP_FORM_URL`: URL to your ClickUp form (e.g., `https://forms.clickup.com/xxxxx/f/xxxxx/xxxxxx`)
 
 ### 3. Azure AD Configuration
 
@@ -71,11 +73,16 @@ Required environment variables:
 4. Add the token and List ID to your `.env` file
 5. Create a custom field for email tracking:
    - Go to your ClickUp List settings
-   - Add a custom field with type "Email" or "Text"
+   - Add a custom field with type "Email" or "Text" 
+   - Name it "Contact Email" (or similar)
    - Note the field ID (default: `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`)
-   - If you use a different field ID, update `EMAIL_FIELD_ID` in:
-     - `lib/clickup.ts` (filterTasksByEmail function)
-     - `app/api/tickets/route.ts` (POST endpoint)
+   - If you use a different field ID, update `EMAIL_FIELD_ID` in `lib/clickup.ts`
+6. Create a ClickUp Form:
+   - Go to your ClickUp List
+   - Click on "Forms" in the menu
+   - Create a new form with the necessary fields (including "Contact Email")
+   - Publish the form and copy the public URL
+   - Add this URL to `NEXT_PUBLIC_CLICKUP_FORM_URL` in your environment variables
 
 ### 5. Run Development Server
 
@@ -148,10 +155,12 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 ## Usage
 
 1. **Sign In**: Users from allowed Azure AD tenants can sign in with their Microsoft account
-2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to create a new ticket
-   - Your email address is automatically added for filtering
-   - Fill in subject, description, priority, and optionally upload attachments (max 5 files)
+2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to open the ClickUp form
+   - Your email address is **automatically pre-filled** in the form
+   - Complete the form in ClickUp and submit
 3. **View Tickets**: Access "Mijn Tickets" to see all tickets associated with your email
+   - Use the search bar to find specific tickets
+   - Navigate through pages (10 tickets per page)
 4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
 
 ## Ticket Filtering Configuration
@@ -160,19 +169,26 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 
 ### How It Works:
 
-When a user creates a ticket, the application **automatically** adds their email to the ClickUp custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`.
+When a user creates a ticket via the ClickUp form, their email is **automatically pre-filled** using URL parameters. The ClickUp form must save this email to the custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`.
 
 When viewing tickets, the app filters by searching for the user's email in:
 1. **Specific custom field** with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` (highest priority)
 2. **Custom fields** named "email", "e-mail", "contact" or containing "email" (case insensitive fallback)
 3. **Description** text (last resort fallback)
 
+### Setup Requirements:
+
+1. Create a custom field in your ClickUp List named "Contact Email" (type: Email or Text)
+2. Add this field to your ClickUp Form
+3. The field will be automatically pre-filled when users access the form through the application
+4. Make sure the field ID matches `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` or update the constant in `lib/clickup.ts`
+
 ### Important Notes:
 
 - ✅ Users only see tickets with their email address
 - 🔒 This provides privacy - users cannot see each other's tickets
-- ✨ Email tracking is fully automatic - no manual input needed
-- 🔧 Make sure your ClickUp List has the custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` configured
+- ✨ Email is automatically pre-filled in the ClickUp form
+- 🔧 The ClickUp form field name must match the URL parameter: "Contact Email"
 
 ## Security
 
