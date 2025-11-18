@@ -1,9 +1,34 @@
-import { auth } from "@/lib/auth";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
-export default async function NewTicketPage() {
-  const session = await auth();
+export default function NewTicketPage() {
+  const { data: session, status } = useSession();
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (status !== "loading") {
+      setIsLoading(false);
+    }
+  }, [status]);
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse text-xl font-semibold text-gray-700">
+            {t("loadingTickets")}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     redirect("/signin");
@@ -18,15 +43,16 @@ export default async function NewTicketPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-                ServiceDesk
+                {t("servicedesk")}
               </Link>
               <div className="flex items-center gap-4">
+                <LanguageSelector />
                 <span className="text-sm text-gray-600">{session.user?.email}</span>
                 <Link
                   href="/api/auth/signout"
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
-                  Uitloggen
+                  {t("logout")}
                 </Link>
               </div>
             </div>
@@ -35,17 +61,16 @@ export default async function NewTicketPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-red-900 mb-2">
-              ClickUp Formulier URL niet geconfigureerd
+              {t("formNotConfigured")}
             </h2>
             <p className="text-red-700">
-              De environment variable <code className="bg-red-100 px-2 py-1 rounded">NEXT_PUBLIC_CLICKUP_FORM_URL</code> is niet ingesteld.
-              Configureer deze in Easypanel om het formulier te kunnen tonen.
+              {t("formNotConfiguredHelp")}
             </p>
             <Link
               href="/"
               className="inline-block mt-4 text-blue-600 hover:text-blue-800"
             >
-              ← Terug naar home
+              {t("back")} →
             </Link>
           </div>
         </main>
@@ -53,7 +78,7 @@ export default async function NewTicketPage() {
     );
   }
 
-  // Pre-fill de email via URL parameter
+  // Pre-fill email via URL parameter
   const userEmail = session.user?.email || "";
   const separator = clickupFormUrl.includes("?") ? "&" : "?";
   const prefilledFormUrl = `${clickupFormUrl}${separator}Contact Email=${encodeURIComponent(userEmail)}`;
@@ -68,19 +93,20 @@ export default async function NewTicketPage() {
                 href="/"
                 className="text-blue-600 hover:text-blue-800"
               >
-                ← Terug
+                ← {t("back")}
               </Link>
               <h1 className="text-xl font-semibold text-gray-900">
-                Nieuw Ticket Aanmaken
+                {t("newTicketTitle")}
               </h1>
             </div>
             <div className="flex items-center gap-4">
+              <LanguageSelector />
               <span className="text-sm text-gray-600">{session.user?.email}</span>
               <Link
                 href="/api/auth/signout"
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Uitloggen
+                {t("logout")}
               </Link>
             </div>
           </div>
