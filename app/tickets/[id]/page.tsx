@@ -5,6 +5,7 @@ import { getTask, filterTasksByEmail } from "@/lib/clickup";
 
 interface TicketDetail {
   id: string;
+  ticketId?: string; // Custom field: Ticket ID
   name: string;
   description: string;
   fullDescription: string;
@@ -39,8 +40,14 @@ async function getTicket(id: string): Promise<TicketDetail | null> {
     // Extract the description
     const description = task.description || "";
 
+    // Extract Ticket ID from custom field
+    const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
+    const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
+    const ticketId = ticketIdField?.value as string | undefined;
+
     const ticket: TicketDetail = {
       id: task.id,
+      ticketId,
       name: task.name,
       description: description,
       fullDescription: description,
@@ -210,6 +217,14 @@ export default async function TicketDetailPage({
                 Ticket Details
               </h2>
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {ticket.ticketId && (
+                  <>
+                    <dt className="font-medium text-gray-700">Ticket ID</dt>
+                    <dd className="text-gray-900">
+                      <span className="font-mono text-lg bg-blue-50 text-blue-700 px-3 py-1 rounded font-semibold">{ticket.ticketId}</span>
+                    </dd>
+                  </>
+                )}
                 <dt className="font-medium text-gray-700">ClickUp ID</dt>
                 <dd className="text-gray-900">
                   <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{ticket.id}</span>

@@ -29,8 +29,14 @@ async function getTickets(): Promise<Ticket[]> {
 
     // Map to ticket format
     const tickets: Ticket[] = userTasks.map((task) => {
+      // Extract Ticket ID from custom field
+      const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
+      const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
+      const ticketId = ticketIdField?.value as string | undefined;
+
       return {
         id: task.id,
+        ticketId,
         name: task.name,
         description: task.description || "",
         status: task.status?.status || "unknown",

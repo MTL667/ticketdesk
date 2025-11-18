@@ -1,5 +1,6 @@
 export interface Ticket {
   id: string;
+  ticketId?: string; // Custom field: Ticket ID
   name: string;
   description: string;
   status: string;

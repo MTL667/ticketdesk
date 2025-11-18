@@ -183,6 +183,14 @@ export function TicketList({ tickets }: TicketListProps) {
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
+                      {ticket.ticketId && (
+                        <p>
+                          <span className="font-medium">Ticket ID:</span>{" "}
+                          <span className="font-mono text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                            {ticket.ticketId}
+                          </span>
+                        </p>
+                      )}
                       <p>
                         <span className="font-medium">ClickUp ID:</span>{" "}
                         <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
