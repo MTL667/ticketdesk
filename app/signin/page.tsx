@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
-export default function SignInPage() {
+function SignInContent() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
   const [callbackUrl, setCallbackUrl] = useState("/");
@@ -57,6 +57,20 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-pulse text-xl font-semibold text-gray-700">
+          Loading...
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }
 
