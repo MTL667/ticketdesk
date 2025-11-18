@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTask, filterTasksByEmail } from "@/lib/clickup";
+import { TicketComments } from "@/components/TicketComments";
 
 interface TicketDetail {
   id: string;
@@ -273,6 +274,11 @@ export default async function TicketDetailPage({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="mt-6">
+          <TicketComments ticketId={ticket.id} userEmail={session.user?.email || ""} />
         </div>
       </main>
     </div>

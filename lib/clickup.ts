@@ -30,6 +30,19 @@ export interface ClickUpTask {
   }>;
 }
 
+export interface ClickUpComment {
+  id: string;
+  comment_text: string;
+  date: number;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    color: string;
+    profilePicture?: string;
+  };
+}
+
 export async function getTasks(): Promise<ClickUpTask[]> {
   const response = await fetch(
     `${CLICKUP_API_BASE}/list/${CLICKUP_LIST_ID}/task?archived=false`,
@@ -102,5 +115,44 @@ export function filterTasksByEmail(tasks: ClickUpTask[], email: string): ClickUp
     
     return false;
   });
+}
+
+// Get comments for a task
+export async function getTaskComments(taskId: string): Promise<ClickUpComment[]> {
+  const response = await fetch(`${CLICKUP_API_BASE}/task/${taskId}/comment`, {
+    headers: {
+      "Authorization": CLICKUP_API_TOKEN!,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`ClickUp API error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.comments || [];
+}
+
+// Post a new comment to a task
+export async function postTaskComment(taskId: string, commentText: string): Promise<ClickUpComment> {
+  const response = await fetch(`${CLICKUP_API_BASE}/task/${taskId}/comment`, {
+    method: "POST",
+    headers: {
+      "Authorization": CLICKUP_API_TOKEN!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      comment_text: commentText,
+      notify_all: true, // Notify all task members
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`ClickUp API error: ${response.status} - ${error}`);
+  }
+
+  return response.json();
 }
 
