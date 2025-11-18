@@ -6,11 +6,11 @@ interface Comment {
   id: string;
   comment_text: string;
   date: number;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    color: string;
+  user?: {
+    id?: number;
+    username?: string;
+    email?: string;
+    color?: string;
     profilePicture?: string;
   };
 }
@@ -170,7 +170,7 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
           </div>
         ) : (
           comments.map((comment) => {
-            const isCurrentUser = comment.user.email.toLowerCase() === userEmail.toLowerCase();
+            const isCurrentUser = comment.user?.email?.toLowerCase() === userEmail.toLowerCase();
             
             return (
               <div
@@ -180,16 +180,16 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
                 {/* Avatar */}
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-                  style={{ backgroundColor: comment.user.color || "#3b82f6" }}
+                  style={{ backgroundColor: comment.user?.color || "#3b82f6" }}
                 >
-                  {comment.user.profilePicture ? (
+                  {comment.user?.profilePicture ? (
                     <img
                       src={comment.user.profilePicture}
-                      alt={comment.user.username}
+                      alt={comment.user?.username || "User"}
                       className="w-full h-full rounded-full"
                     />
                   ) : (
-                    getInitials(comment.user.username)
+                    getInitials(comment.user?.username || "User")
                   )}
                 </div>
 
@@ -197,7 +197,7 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
                 <div className={`flex-1 ${isCurrentUser ? "text-right" : ""}`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className={`font-medium text-sm text-gray-900 ${isCurrentUser ? "order-2" : ""}`}>
-                      {isCurrentUser ? "Jij" : comment.user.username}
+                      {isCurrentUser ? "Jij" : (comment.user?.username || "Gebruiker")}
                     </span>
                     <span className={`text-xs text-gray-500 ${isCurrentUser ? "order-1" : ""}`}>
                       {formatDate(comment.date)}

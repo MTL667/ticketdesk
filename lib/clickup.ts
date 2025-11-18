@@ -34,11 +34,11 @@ export interface ClickUpComment {
   id: string;
   comment_text: string;
   date: number;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    color: string;
+  user?: {
+    id?: number;
+    username?: string;
+    email?: string;
+    color?: string;
     profilePicture?: string;
   };
 }
