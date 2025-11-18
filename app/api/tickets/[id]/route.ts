@@ -22,30 +22,21 @@ export async function GET(
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
     }
 
-    // Extract metadata from description
-    const typeVraagMatch = task.description.match(/Type vraag[^:]*:\s*(.+)/i);
-    const gebouwMatch = task.description.match(/Gebouw[^:]*:\s*(.+)/i);
-    const toepassingsgebiedMatch = task.description.match(/Toepassingsgebied[^:]*:\s*(.+)/i);
-    const prioriteitMatch = task.description.match(/Prioriteit[^:]*:\s*(\w+)/i);
-    const requesterEmailMatch = task.description.match(/Requester Email:\s*(.+)/i);
-    const tenantIdMatch = task.description.match(/Tenant ID:\s*(.+)/i);
+    // Extract Ticket ID from custom field
+    const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
+    const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
+    const ticketId = ticketIdField?.value as string | undefined;
 
-    // Extract the main description (everything before the "---")
-    const descriptionParts = task.description.split("---");
-    const mainDescription = descriptionParts[0]?.trim() || task.description;
+    const description = task.description || "";
 
     const ticket = {
       id: task.id,
+      ticketId,
       name: task.name,
-      description: mainDescription,
-      fullDescription: task.description,
+      description: description,
+      fullDescription: description,
       status: task.status?.status || "unknown",
-      priority: prioriteitMatch ? prioriteitMatch[1] : task.priority?.priority || "normal",
-      typeVraag: typeVraagMatch ? typeVraagMatch[1].trim() : undefined,
-      gebouw: gebouwMatch ? gebouwMatch[1].trim() : undefined,
-      toepassingsgebied: toepassingsgebiedMatch ? toepassingsgebiedMatch[1].trim() : undefined,
-      requesterEmail: requesterEmailMatch ? requesterEmailMatch[1].trim() : undefined,
-      tenantId: tenantIdMatch ? tenantIdMatch[1].trim() : undefined,
+      priority: task.priority?.priority || "normal",
       dateCreated: task.date_created,
       dateUpdated: task.date_updated,
       attachments: task.attachments?.map((att) => ({

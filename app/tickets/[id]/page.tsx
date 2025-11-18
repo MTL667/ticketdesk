@@ -1,12 +1,16 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
-import { getTask, filterTasksByEmail } from "@/lib/clickup";
 import { TicketComments } from "@/components/TicketComments";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 interface TicketDetail {
   id: string;
-  ticketId?: string; // Custom field: Ticket ID
+  ticketId?: string;
   name: string;
   description: string;
   fullDescription: string;
@@ -19,59 +23,6 @@ interface TicketDetail {
     url: string;
     title: string;
   }>;
-}
-
-async function getTicket(id: string): Promise<TicketDetail | null> {
-  const session = await auth();
-  
-  if (!session?.user?.email) {
-    return null;
-  }
-
-  try {
-    const task = await getTask(id);
-    
-    // Verify task belongs to user (checks custom fields and description)
-    const userTasks = filterTasksByEmail([task], session.user.email);
-    if (userTasks.length === 0) {
-      console.log(`[TicketDetail] Access denied: Ticket ${id} does not belong to user ${session.user.email}`);
-      return null;
-    }
-
-    // Extract the description
-    const description = task.description || "";
-
-    // Extract Ticket ID from custom field
-    const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
-    const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
-    const ticketId = ticketIdField?.value as string | undefined;
-
-    const ticket: TicketDetail = {
-      id: task.id,
-      ticketId,
-      name: task.name,
-      description: description,
-      fullDescription: description,
-      status: task.status?.status || "unknown",
-      priority: task.priority?.priority || "normal",
-      dateCreated: task.date_created,
-      dateUpdated: task.date_updated,
-      attachments: task.attachments?.map((att) => ({
-        id: att.id,
-        url: att.url,
-        title: att.title,
-      })),
-    };
-
-    console.log(`[TicketDetail] Successfully loaded ticket ${id} for user: ${session.user.email}`);
-    return ticket;
-  } catch (error) {
-    console.error(`[TicketDetail] Error fetching ticket ${id}:`, error);
-    if (error instanceof Error) {
-      console.error(`[TicketDetail] Error details:`, error.message);
-    }
-    return null;
-  }
 }
 
 function formatDate(dateString: string): string {
@@ -123,19 +74,55 @@ function getPriorityColor(priority: string): string {
   return "bg-gray-100 text-gray-800";
 }
 
-export default async function TicketDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const session = await auth();
+export default function TicketDetailPage() {
+  const { data: session, status } = useSession();
+  const { t } = useLanguage();
+  const params = useParams();
+  const id = params.id as string;
+  
+  const [ticket, setTicket] = useState<TicketDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchTicket();
+    } else if (status === "unauthenticated") {
+      redirect("/signin");
+    }
+  }, [status, id]);
+
+  const fetchTicket = async () => {
+    try {
+      const response = await fetch(`/api/tickets/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTicket(data);
+      } else {
+        setTicket(null);
+      }
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+      setTicket(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (status === "loading" || isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse text-xl font-semibold text-gray-700">
+            {t("loadingTickets")}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     redirect("/signin");
   }
-
-  const { id } = await params;
-  const ticket = await getTicket(id);
 
   if (!ticket) {
     return (
@@ -144,22 +131,32 @@ export default async function TicketDetailPage({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-                ServiceDesk
+                {t("servicedesk")}
               </Link>
+              <div className="flex items-center gap-4">
+                <LanguageSelector />
+                <span className="text-sm text-gray-600">{session.user?.email}</span>
+                <Link
+                  href="/api/auth/signout"
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  {t("logout")}
+                </Link>
+              </div>
             </div>
           </div>
         </nav>
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Ticket niet gevonden</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">{t("ticketNotFound")}</h1>
             <p className="text-gray-600 mb-6">
-              Dit ticket bestaat niet of u heeft geen toegang tot dit ticket.
+              {t("ticketNotFoundDescription")}
             </p>
             <Link
               href="/tickets"
               className="text-blue-600 hover:text-blue-800 font-medium"
             >
-              ← Terug naar Mijn Tickets
+              {t("backToTickets")}
             </Link>
           </div>
         </main>
@@ -173,15 +170,16 @@ export default async function TicketDetailPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="text-xl font-semibold text-gray-900 hover:text-blue-600">
-              ServiceDesk
+              {t("servicedesk")}
             </Link>
             <div className="flex items-center gap-4">
+              <LanguageSelector />
               <span className="text-sm text-gray-600">{session.user?.email}</span>
               <Link
                 href="/api/auth/signout"
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Uitloggen
+                {t("logout")}
               </Link>
             </div>
           </div>
@@ -194,7 +192,7 @@ export default async function TicketDetailPage({
             href="/tickets"
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
-            ← Terug naar Mijn Tickets
+            {t("backToTickets")}
           </Link>
         </div>
 
@@ -215,28 +213,28 @@ export default async function TicketDetailPage({
             {/* Ticket Details */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Ticket Details
+                {t("ticketDetails")}
               </h2>
               <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {ticket.ticketId && (
                   <>
-                    <dt className="font-medium text-gray-700">Ticket ID</dt>
+                    <dt className="font-medium text-gray-700">{t("ticketId")}</dt>
                     <dd className="text-gray-900">
                       <span className="font-mono text-lg bg-blue-50 text-blue-700 px-3 py-1 rounded font-semibold">{ticket.ticketId}</span>
                     </dd>
                   </>
                 )}
-                <dt className="font-medium text-gray-700">ClickUp ID</dt>
+                <dt className="font-medium text-gray-700">{t("clickupId")}</dt>
                 <dd className="text-gray-900">
                   <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{ticket.id}</span>
                 </dd>
-                <dt className="font-medium text-gray-700">Prioriteit</dt>
+                <dt className="font-medium text-gray-700">{t("priority")}</dt>
                 <dd className="text-gray-900 capitalize">{ticket.priority}</dd>
-                <dt className="font-medium text-gray-700">Status</dt>
+                <dt className="font-medium text-gray-700">{t("status")}</dt>
                 <dd className="text-gray-900">{ticket.status}</dd>
-                <dt className="font-medium text-gray-700">Aangemaakt op</dt>
+                <dt className="font-medium text-gray-700">{t("createdOn")}</dt>
                 <dd className="text-gray-900">{formatDate(ticket.dateCreated)}</dd>
-                <dt className="font-medium text-gray-700">Laatst bijgewerkt</dt>
+                <dt className="font-medium text-gray-700">{t("lastUpdated")}</dt>
                 <dd className="text-gray-900">{formatDate(ticket.dateUpdated)}</dd>
               </dl>
             </div>
@@ -244,7 +242,7 @@ export default async function TicketDetailPage({
             {/* Description */}
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Omschrijving
+                {t("description")}
               </h2>
               <div className="prose max-w-none">
                 <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
@@ -255,7 +253,7 @@ export default async function TicketDetailPage({
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Bijlagen
+                  {t("attachments")}
                 </h2>
                 <div className="space-y-2">
                   {ticket.attachments.map((attachment) => (
@@ -284,4 +282,3 @@ export default async function TicketDetailPage({
     </div>
   );
 }
-

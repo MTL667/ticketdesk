@@ -98,7 +98,7 @@ export function TicketList({ tickets }: TicketListProps) {
         <div className="relative">
           <input
             type="text"
-            placeholder="Zoek tickets op naam, beschrijving, ID of status..."
+            placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -116,8 +116,7 @@ export function TicketList({ tickets }: TicketListProps) {
           )}
         </div>
         <p className="mt-2 text-sm text-gray-500">
-          {filteredTickets.length} van {tickets.length} ticket
-          {tickets.length !== 1 ? "s" : ""}
+          {filteredTickets.length} {t("ticketsCount")} {tickets.length} {t("ticketsWord")}
         </p>
       </div>
 
@@ -127,29 +126,28 @@ export function TicketList({ tickets }: TicketListProps) {
           {searchQuery ? (
             <>
               <p className="text-gray-600 mb-2">
-                Geen tickets gevonden voor &quot;{searchQuery}&quot;
+                {t("noTicketsFound")} &quot;{searchQuery}&quot;
               </p>
               <button
                 onClick={() => handleSearchChange("")}
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                Wis zoekopdracht
+                {t("clearSearch")}
               </button>
             </>
           ) : (
             <>
               <div className="mb-4">
-                <p className="text-gray-600 mb-2">Er zijn nog geen tickets gevonden.</p>
+                <p className="text-gray-600 mb-2">{t("noTickets")}</p>
                 <p className="text-sm text-gray-500">
-                  Controleer of er tickets in de ClickUp list staan en of de CLICKUP_LIST_ID
-                  correct is ingesteld.
+                  {t("noTicketsHelp")}
                 </p>
               </div>
               <Link
                 href="/tickets/new"
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                Maak uw eerste ticket aan →
+                {t("createFirstTicket")}
               </Link>
             </>
           )}
@@ -221,7 +219,7 @@ export function TicketList({ tickets }: TicketListProps) {
                 disabled={currentPage === 1}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ← Vorige
+                ← {t("previous")}
               </button>
               
               <div className="flex gap-1">
@@ -270,13 +268,13 @@ export function TicketList({ tickets }: TicketListProps) {
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Volgende →
+                {t("next")} →
               </button>
             </div>
           )}
 
           <p className="mt-4 text-center text-sm text-gray-500">
-            Pagina {currentPage} van {totalPages}
+            {t("page")} {currentPage} {t("of")} {totalPages}
           </p>
         </>
       )}
