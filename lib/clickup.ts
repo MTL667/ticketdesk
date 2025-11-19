@@ -43,6 +43,54 @@ export interface ClickUpComment {
   };
 }
 
+async function fetchAllTasksFromList(listId: string): Promise<ClickUpTask[]> {
+  const allTasks: ClickUpTask[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const response = await fetch(
+        `${CLICKUP_API_BASE}/list/${listId}/task?archived=false&page=${page}`,
+        {
+          headers: {
+            "Authorization": CLICKUP_API_TOKEN!,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error(`Error fetching tasks from list ${listId} (page ${page}):`, error);
+        break;
+      }
+
+      const data = await response.json();
+      const tasks = data.tasks || [];
+      
+      if (tasks.length === 0) {
+        // No more tasks to fetch
+        hasMore = false;
+      } else {
+        allTasks.push(...tasks);
+        page++;
+        
+        // ClickUp returns up to 100 tasks per page
+        // If we got less than 100, we've reached the end
+        if (tasks.length < 100) {
+          hasMore = false;
+        }
+      }
+    } catch (error) {
+      console.error(`Exception fetching tasks from list ${listId} (page ${page}):`, error);
+      hasMore = false;
+    }
+  }
+
+  console.log(`Fetched ${allTasks.length} tasks from list ${listId} across ${page} pages`);
+  return allTasks;
+}
+
 export async function getTasks(): Promise<ClickUpTask[]> {
   if (!CLICKUP_LIST_IDS) {
     throw new Error("CLICKUP_LIST_IDS environment variable is not set");
@@ -55,31 +103,14 @@ export async function getTasks(): Promise<ClickUpTask[]> {
     throw new Error("No valid list IDs found in CLICKUP_LIST_IDS");
   }
 
-  // Fetch tasks from all lists in parallel
-  const taskPromises = listIds.map(async (listId) => {
-    const response = await fetch(
-      `${CLICKUP_API_BASE}/list/${listId}/task?archived=false`,
-      {
-        headers: {
-          "Authorization": CLICKUP_API_TOKEN!,
-        },
-      }
-    );
+  console.log(`Fetching tasks from ${listIds.length} list(s)...`);
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`Error fetching tasks from list ${listId}:`, error);
-      // Return empty array instead of throwing to allow other lists to load
-      return [];
-    }
-
-    const data = await response.json();
-    return data.tasks || [];
-  });
-
-  // Wait for all requests to complete and flatten the results
+  // Fetch all tasks from all lists in parallel
+  const taskPromises = listIds.map(listId => fetchAllTasksFromList(listId));
   const tasksArrays = await Promise.all(taskPromises);
   const allTasks = tasksArrays.flat();
+  
+  console.log(`Total tasks fetched: ${allTasks.length}`);
   
   // Sort by date_created descending (newest first)
   allTasks.sort((a, b) => {
