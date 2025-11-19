@@ -47,7 +47,7 @@ cp .env.example .env
 Required environment variables:
 
 - `CLICKUP_API_TOKEN`: Your ClickUp API token
-- `CLICKUP_LIST_ID`: The ClickUp List ID where tickets will be created
+- `CLICKUP_LIST_IDS`: Comma-separated list of ClickUp List IDs to search for tickets (e.g., `123456789,987654321`)
 - `AZURE_AD_CLIENT_ID`: Azure AD application client ID
 - `AZURE_AD_CLIENT_SECRET`: Azure AD application client secret
 - `AZURE_AD_TENANT_ID`: Set to `"common"` or `"organizations"` for multi-tenant
@@ -67,10 +67,10 @@ Required environment variables:
 
 ### 4. ClickUp Configuration
 
-1. Create a List in ClickUp where tickets will be stored
-2. Get the List ID from the ClickUp URL (format: `/v/li/{LIST_ID}`)
+1. Create one or more Lists in ClickUp where tickets will be stored
+2. Get the List IDs from the ClickUp URLs (format: `/v/li/{LIST_ID}`)
 3. Generate an API token in ClickUp Settings > Apps > API
-4. Add the token and List ID to your `.env` file
+4. Add the token and List IDs to your `.env` file (comma-separated for multiple lists)
 5. Create a custom field for email tracking:
    - Go to your ClickUp List settings
    - Add a custom field with type "Email" or "Text" 
@@ -112,7 +112,7 @@ docker build -t ticketdesk .
 ```bash
 docker run -p 3000:3000 \
   -e CLICKUP_API_TOKEN=your_token \
-  -e CLICKUP_LIST_ID=your_list_id \
+  -e CLICKUP_LIST_IDS=list_id_1,list_id_2 \
   -e AZURE_AD_CLIENT_ID=your_client_id \
   -e AZURE_AD_CLIENT_SECRET=your_client_secret \
   -e AZURE_AD_TENANT_ID=common \
@@ -162,6 +162,30 @@ docker run -p 3000:3000 --env-file .env ticketdesk
    - Use the search bar to find specific tickets
    - Navigate through pages (10 tickets per page)
 4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
+
+## Multi-List Support
+
+✨ **The application can search across multiple ClickUp lists simultaneously.**
+
+### How It Works:
+
+Set the `CLICKUP_LIST_IDS` environment variable with comma-separated list IDs:
+
+```env
+CLICKUP_LIST_IDS=123456789,987654321,555555555
+```
+
+- All tickets from all configured lists are fetched **in parallel** for optimal performance
+- Results are automatically sorted by creation date (newest first)
+- If one list fails to load, others will still be displayed
+- Works with a single list or hundreds of lists
+
+### Use Cases:
+
+- **Departments**: Search across multiple department lists (IT, HR, Facilities)
+- **Projects**: Include tickets from different project lists
+- **Teams**: Combine tickets from various team lists
+- **Workspaces**: Aggregate tickets across organizational units
 
 ## Ticket Filtering Configuration
 

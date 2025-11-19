@@ -1,5 +1,5 @@
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
-const CLICKUP_LIST_ID = process.env.CLICKUP_LIST_ID;
+const CLICKUP_LIST_IDS = process.env.CLICKUP_LIST_IDS; // Comma-separated list IDs
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
 export interface ClickUpTask {
@@ -44,22 +44,51 @@ export interface ClickUpComment {
 }
 
 export async function getTasks(): Promise<ClickUpTask[]> {
-  const response = await fetch(
-    `${CLICKUP_API_BASE}/list/${CLICKUP_LIST_ID}/task?archived=false`,
-    {
-      headers: {
-        "Authorization": CLICKUP_API_TOKEN!,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`ClickUp API error: ${response.status} - ${error}`);
+  if (!CLICKUP_LIST_IDS) {
+    throw new Error("CLICKUP_LIST_IDS environment variable is not set");
   }
 
-  const data = await response.json();
-  return data.tasks || [];
+  // Split the comma-separated list IDs and trim whitespace
+  const listIds = CLICKUP_LIST_IDS.split(',').map(id => id.trim()).filter(id => id.length > 0);
+  
+  if (listIds.length === 0) {
+    throw new Error("No valid list IDs found in CLICKUP_LIST_IDS");
+  }
+
+  // Fetch tasks from all lists in parallel
+  const taskPromises = listIds.map(async (listId) => {
+    const response = await fetch(
+      `${CLICKUP_API_BASE}/list/${listId}/task?archived=false`,
+      {
+        headers: {
+          "Authorization": CLICKUP_API_TOKEN!,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`Error fetching tasks from list ${listId}:`, error);
+      // Return empty array instead of throwing to allow other lists to load
+      return [];
+    }
+
+    const data = await response.json();
+    return data.tasks || [];
+  });
+
+  // Wait for all requests to complete and flatten the results
+  const tasksArrays = await Promise.all(taskPromises);
+  const allTasks = tasksArrays.flat();
+  
+  // Sort by date_created descending (newest first)
+  allTasks.sort((a, b) => {
+    const dateA = new Date(a.date_created).getTime();
+    const dateB = new Date(b.date_created).getTime();
+    return dateB - dateA;
+  });
+
+  return allTasks;
 }
 
 export async function getTask(taskId: string): Promise<ClickUpTask> {
