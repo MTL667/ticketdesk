@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tasks = await getTasks();
+    const totalTasksSearched = tasks.length;
     
     // Filter tasks by email (looks in custom fields and description)
     const userTasks = filterTasksByEmail(tasks, session.user.email);
@@ -39,7 +40,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(tickets);
+    return NextResponse.json({
+      tickets,
+      metadata: {
+        totalTasksSearched,
+        userTicketsFound: tickets.length,
+        listCount: process.env.CLICKUP_LIST_IDS?.split(',').length || 1,
+      }
+    });
   } catch (error) {
     console.error("Error fetching tickets:", error);
     return NextResponse.json(
