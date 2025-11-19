@@ -15,36 +15,125 @@ interface TicketsMetadata {
   listCount: number;
 }
 
+const CACHE_KEY = "ticketdesk_tickets_cache";
+const CACHE_TIMESTAMP_KEY = "ticketdesk_tickets_timestamp";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function formatLastUpdated(date: Date, language: string): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  
+  if (diffMins < 1) {
+    return language === 'nl' ? 'zojuist' : language === 'fr' ? 'à l\'instant' : 'just now';
+  } else if (diffMins < 60) {
+    const minsText = language === 'nl' ? 'min geleden' : language === 'fr' ? 'min' : 'min ago';
+    return `${diffMins} ${minsText}`;
+  } else {
+    return date.toLocaleTimeString(language === 'nl' ? 'nl-BE' : language === 'fr' ? 'fr-BE' : 'en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  }
+}
+
 export default function TicketsPage() {
   const { data: session, status } = useSession();
   const { t, language } = useLanguage();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [metadata, setMetadata] = useState<TicketsMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchTickets();
+      loadTickets();
     } else if (status === "unauthenticated") {
       redirect("/signin");
     }
   }, [status]);
 
-  const fetchTickets = async () => {
+  const loadTickets = () => {
+    // Try to load from cache first
+    const cachedData = loadFromCache();
+    if (cachedData) {
+      setTickets(cachedData.tickets);
+      setMetadata(cachedData.metadata);
+      setLastUpdated(cachedData.timestamp);
+      setIsLoading(false);
+      console.log("Loaded tickets from cache");
+    } else {
+      // No cache or expired, fetch fresh data
+      fetchTickets();
+    }
+  };
+
+  const loadFromCache = (): { tickets: Ticket[], metadata: TicketsMetadata, timestamp: Date } | null => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      const timestamp = sessionStorage.getItem(CACHE_TIMESTAMP_KEY);
+      
+      if (cached && timestamp) {
+        const cacheTime = new Date(timestamp);
+        const now = new Date();
+        const age = now.getTime() - cacheTime.getTime();
+        
+        // Check if cache is still valid (within 5 minutes)
+        if (age < CACHE_DURATION) {
+          const data = JSON.parse(cached);
+          return {
+            tickets: data.tickets,
+            metadata: data.metadata,
+            timestamp: cacheTime
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cache:", error);
+    }
+    return null;
+  };
+
+  const saveToCache = (tickets: Ticket[], metadata: TicketsMetadata | null) => {
+    try {
+      const now = new Date();
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ tickets, metadata }));
+      sessionStorage.setItem(CACHE_TIMESTAMP_KEY, now.toISOString());
+      setLastUpdated(now);
+    } catch (error) {
+      console.error("Error saving cache:", error);
+    }
+  };
+
+  const fetchTickets = async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
     try {
       const response = await fetch("/api/tickets");
       if (response.ok) {
         const data = await response.json();
-        setTickets(data.tickets || data); // Support old and new format
-        if (data.metadata) {
-          setMetadata(data.metadata);
-        }
+        const newTickets = data.tickets || data;
+        const newMetadata = data.metadata || null;
+        
+        setTickets(newTickets);
+        setMetadata(newMetadata);
+        saveToCache(newTickets, newMetadata);
       }
     } catch (error) {
       console.error("Error fetching tickets:", error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchTickets(true);
   };
 
   if (status === "loading" || isLoading) {
@@ -159,20 +248,52 @@ export default function TicketsPage() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t("myTicketsTitle")}</h1>
-            {metadata && (
-              <p className="text-sm text-gray-600 mt-1">
-                {language === 'nl' && `Doorzocht ${metadata.totalTasksSearched} tickets in ${metadata.listCount} ${metadata.listCount === 1 ? 'lijst' : 'lijsten'}`}
-                {language === 'fr' && `Recherché dans ${metadata.totalTasksSearched} tickets dans ${metadata.listCount} ${metadata.listCount === 1 ? 'liste' : 'listes'}`}
-                {language === 'en' && `Searched ${metadata.totalTasksSearched} tickets in ${metadata.listCount} ${metadata.listCount === 1 ? 'list' : 'lists'}`}
-              </p>
-            )}
+            <div className="flex items-center gap-3 mt-1">
+              {metadata && (
+                <p className="text-sm text-gray-600">
+                  {language === 'nl' && `Doorzocht ${metadata.totalTasksSearched} tickets in ${metadata.listCount} ${metadata.listCount === 1 ? 'lijst' : 'lijsten'}`}
+                  {language === 'fr' && `Recherché dans ${metadata.totalTasksSearched} tickets dans ${metadata.listCount} ${metadata.listCount === 1 ? 'liste' : 'listes'}`}
+                  {language === 'en' && `Searched ${metadata.totalTasksSearched} tickets in ${metadata.listCount} ${metadata.listCount === 1 ? 'list' : 'lists'}`}
+                </p>
+              )}
+              {lastUpdated && (
+                <p className="text-xs text-gray-500">
+                  {language === 'nl' && `Laatst ververst: ${formatLastUpdated(lastUpdated, language)}`}
+                  {language === 'fr' && `Dernière mise à jour: ${formatLastUpdated(lastUpdated, language)}`}
+                  {language === 'en' && `Last updated: ${formatLastUpdated(lastUpdated, language)}`}
+                </p>
+              )}
+            </div>
           </div>
-          <Link
-            href="/tickets/new"
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            {t("newTicketButton")}
-          </Link>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title={language === 'nl' ? 'Ververs tickets' : language === 'fr' ? 'Actualiser les tickets' : 'Refresh tickets'}
+            >
+              <span className={isRefreshing ? 'animate-spin' : ''}>🔄</span>
+              {isRefreshing ? (
+                <>
+                  {language === 'nl' && 'Verversen...'}
+                  {language === 'fr' && 'Actualisation...'}
+                  {language === 'en' && 'Refreshing...'}
+                </>
+              ) : (
+                <>
+                  {language === 'nl' && 'Ververs'}
+                  {language === 'fr' && 'Actualiser'}
+                  {language === 'en' && 'Refresh'}
+                </>
+              )}
+            </button>
+            <Link
+              href="/tickets/new"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              {t("newTicketButton")}
+            </Link>
+          </div>
         </div>
 
         <TicketList tickets={tickets} />
