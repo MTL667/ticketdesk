@@ -7,6 +7,7 @@ const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 // Custom field IDs
 const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
 const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
+const RELEASE_NOTES_FIELD_ID = "060ed832-9a39-4143-8c9b-571b346eba15";
 
 // Helper to safely convert any value to string or null
 function toStringOrNull(value: unknown): string | null {
@@ -75,10 +76,10 @@ function extractEmail(task: any): string | null {
   return null;
 }
 
-// Helper to get boolean custom field (checkbox type)
-function getBooleanCustomField(fields: any[] | undefined, name: string): boolean {
+// Helper to get boolean custom field by ID (checkbox type)
+function getBooleanCustomFieldById(fields: any[] | undefined, fieldId: string): boolean {
   if (!fields) return false;
-  const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
+  const field = fields.find(f => f.id === fieldId);
   if (!field) return false;
   
   // Checkbox fields have value = true/false
@@ -118,7 +119,7 @@ function taskToTicket(task: any) {
     jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee"),
     jiraUrl: getCustomFieldByName(task.custom_fields, "jira url") || 
              getCustomFieldByName(task.custom_fields, "jira link"),
-    releaseNotes: getBooleanCustomField(task.custom_fields, "release"),
+    releaseNotes: getBooleanCustomFieldById(task.custom_fields, RELEASE_NOTES_FIELD_ID),
     dueDate: dueDate,
     clickupCreatedAt: new Date(parseInt(task.date_created)),
     clickupUpdatedAt: new Date(parseInt(task.date_updated)),
