@@ -93,7 +93,7 @@ export default function TicketsPage() {
     }
   }, []);
 
-  const triggerSync = async () => {
+  const triggerSync = async (force = false) => {
     setIsSyncing(true);
     let pollIntervalId: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
@@ -104,7 +104,16 @@ export default function TicketsPage() {
     };
     
     try {
-      const response = await fetch("/api/sync", { method: "POST" });
+      // If force, first reset stuck syncs
+      if (force) {
+        console.log("Force sync: resetting stuck syncs...");
+        await fetch("/api/sync", { method: "DELETE" });
+      }
+      
+      const url = force ? "/api/sync?force=true" : "/api/sync";
+      const response = await fetch(url, { method: "POST" });
+      
+      console.log("Sync POST response:", response.status);
       
       // Start polling regardless of response (409 means already running)
       if (response.ok || response.status === 409) {
@@ -121,6 +130,7 @@ export default function TicketsPage() {
               
               // Check if sync completed
               if (!data.isRunning) {
+                console.log("Sync completed, refreshing tickets");
                 cleanup();
                 setIsSyncing(false);
                 fetchTickets(true);
@@ -147,13 +157,13 @@ export default function TicketsPage() {
           }
         }, 2000);
 
-        // Timeout after 10 minutes
+        // Timeout after 15 minutes
         timeoutId = setTimeout(() => {
-          console.log("Sync timeout reached");
+          console.log("Sync timeout reached (15min)");
           cleanup();
           setIsSyncing(false);
           fetchTickets(true);
-        }, 10 * 60 * 1000);
+        }, 15 * 60 * 1000);
       } else {
         // Unexpected error
         const errorText = await response.text();
@@ -259,12 +269,13 @@ export default function TicketsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {/* Sync Button */}
+            {/* Sync Button - double click for force sync */}
             <button
-              onClick={triggerSync}
+              onClick={() => triggerSync(false)}
+              onDoubleClick={() => triggerSync(true)}
               disabled={isSyncing}
               className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-              title={language === "nl" ? "Synchroniseer met ClickUp" : language === "fr" ? "Synchroniser avec ClickUp" : "Sync with ClickUp"}
+              title={language === "nl" ? "Sync (dubbelklik = force)" : language === "fr" ? "Sync (double-clic = force)" : "Sync (double-click = force)"}
             >
               <span className={isSyncing ? "animate-spin" : ""}>⚡</span>
               {isSyncing ? (
