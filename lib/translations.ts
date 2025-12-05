@@ -14,6 +14,8 @@ export const translations = {
     newTicketDescription: "Dien een nieuwe aanvraag in via het ClickUp formulier",
     myTickets: "Mijn Tickets",
     myTicketsDescription: "Bekijk al uw bestaande tickets en hun status",
+    releases: "Releases",
+    releasesDescription: "Bekijk alle release notes en updates",
     
     // Sign in page
     signInTitle: "ServiceDesk",
@@ -112,6 +114,8 @@ export const translations = {
     newTicketDescription: "Soumettez une nouvelle demande via le formulaire ClickUp",
     myTickets: "Mes Tickets",
     myTicketsDescription: "Consultez tous vos tickets existants et leur statut",
+    releases: "Releases",
+    releasesDescription: "Consultez toutes les notes de version et mises à jour",
     
     // Sign in page
     signInTitle: "ServiceDesk",
@@ -210,6 +214,8 @@ export const translations = {
     newTicketDescription: "Submit a new request via the ClickUp form",
     myTickets: "My Tickets",
     myTicketsDescription: "View all your existing tickets and their status",
+    releases: "Releases",
+    releasesDescription: "View all release notes and updates",
     
     // Sign in page
     signInTitle: "ServiceDesk",

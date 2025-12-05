@@ -75,9 +75,35 @@ function extractEmail(task: any): string | null {
   return null;
 }
 
+// Helper to get boolean custom field (checkbox type)
+function getBooleanCustomField(fields: any[] | undefined, name: string): boolean {
+  if (!fields) return false;
+  const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
+  if (!field) return false;
+  
+  // Checkbox fields have value = true/false
+  if (typeof field.value === "boolean") return field.value;
+  // Sometimes it's a string "true"/"false"
+  if (typeof field.value === "string") return field.value.toLowerCase() === "true";
+  // Or it could be 1/0
+  if (typeof field.value === "number") return field.value === 1;
+  
+  return false;
+}
+
 // Convert task to database format
 function taskToTicket(task: any) {
   const email = extractEmail(task);
+  
+  // Parse due date if present
+  let dueDate: Date | null = null;
+  if (task.due_date) {
+    try {
+      dueDate = new Date(parseInt(task.due_date));
+    } catch {
+      dueDate = null;
+    }
+  }
   
   return {
     id: task.id,
@@ -92,6 +118,8 @@ function taskToTicket(task: any) {
     jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee"),
     jiraUrl: getCustomFieldByName(task.custom_fields, "jira url") || 
              getCustomFieldByName(task.custom_fields, "jira link"),
+    releaseNotes: getBooleanCustomField(task.custom_fields, "release"),
+    dueDate: dueDate,
     clickupCreatedAt: new Date(parseInt(task.date_created)),
     clickupUpdatedAt: new Date(parseInt(task.date_updated)),
   };

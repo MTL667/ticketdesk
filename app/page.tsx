@@ -66,7 +66,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <Link
             href="/tickets/new"
             className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-blue-500"
@@ -93,6 +93,21 @@ export default function Home() {
               </h3>
               <p className="text-gray-600">
                 {t("myTicketsDescription")}
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/releases"
+            className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-purple-500"
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {t("releases")}
+              </h3>
+              <p className="text-gray-600">
+                {t("releasesDescription")}
               </p>
             </div>
           </Link>

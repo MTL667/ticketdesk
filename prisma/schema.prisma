@@ -28,6 +28,10 @@ model Ticket {
   jiraAssignee    String?
   jiraUrl         String?
   
+  // Release notes
+  releaseNotes    Boolean   @default(false)  // Custom field: Release notes = true
+  dueDate         DateTime? // Due date from ClickUp
+  
   // Timestamps from ClickUp
   clickupCreatedAt DateTime
   clickupUpdatedAt DateTime
@@ -42,6 +46,7 @@ model Ticket {
   @@index([status])
   @@index([ticketId])
   @@index([syncedAt])
+  @@index([releaseNotes])
 }
 
 // Track sync status
