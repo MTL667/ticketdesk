@@ -5,13 +5,14 @@ A production-ready Next.js 15.4 application for managing internal support ticket
 ## Features
 
 - **Azure AD Multi-Tenant Authentication**: Secure authentication with Microsoft Entra ID, supporting multiple tenants with tenant validation
-- **ClickUp Integration**: All ticket data is stored and managed through ClickUp API (no database required)
+- **ClickUp Integration**: Ticket data is synced from ClickUp and cached in PostgreSQL for fast queries
+- **PostgreSQL Database**: Local database for fast ticket searches (syncs with ClickUp)
 - **ClickUp Form Integration**: Create tickets via ClickUp forms with automatic email pre-filling
-- **Pagination & Search**: Browse tickets 10 at a time with instant search functionality
+- **Pagination & Search**: Browse tickets with instant search functionality
 - **Automatic Email Tracking**: User email is automatically pre-filled in ClickUp forms for filtering
 - **Ticket Viewing**: Users can view their own tickets with status, attachments, and full details
-- **Bilingual Support**: Dutch/French interface
-- **Docker Support**: Ready for containerized deployment
+- **Trilingual Support**: Dutch/French/English interface
+- **Docker Support**: Ready for containerized deployment with Easypanel
 
 ## Tech Stack
 
@@ -19,11 +20,35 @@ A production-ready Next.js 15.4 application for managing internal support ticket
 - TypeScript
 - Tailwind CSS
 - NextAuth.js v5 (Azure AD provider)
+- Prisma ORM + PostgreSQL
 - ClickUp API
+
+## Architecture
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   User Browser   │────▶│   Next.js App    │────▶│   PostgreSQL     │
+│                  │◀────│                  │◀────│   (Fast Cache)   │
+└──────────────────┘     └────────┬─────────┘     └──────────────────┘
+                                  │
+                                  │ Background Sync
+                                  ▼
+                         ┌──────────────────┐
+                         │   ClickUp API    │
+                         │ (Source of Truth)│
+                         └──────────────────┘
+```
+
+**How it works:**
+1. Tickets are created in ClickUp (via form or API)
+2. Background sync fetches tickets from ClickUp and stores in PostgreSQL
+3. User queries read from PostgreSQL for instant results
+4. Sync runs automatically every 5 minutes or manually via sync button
 
 ## Prerequisites
 
 - Node.js 20+
+- PostgreSQL database (can be on Easypanel)
 - ClickUp account with API token
 - Azure AD application registered in Microsoft Entra ID
 - Docker (for containerized deployment)
@@ -36,53 +61,58 @@ A production-ready Next.js 15.4 application for managing internal support ticket
 npm install
 ```
 
-### 2. Environment Variables
+### 2. Set up PostgreSQL Database
 
-Copy `.env.example` to `.env` and fill in all required values:
+**Option A: Easypanel**
+1. Create a new PostgreSQL service in Easypanel
+2. Note the connection string (format: `postgresql://user:password@host:5432/database`)
 
+**Option B: Local Development**
 ```bash
-cp .env.example .env
+docker run -d --name ticketdesk-db \
+  -e POSTGRES_USER=ticketdesk \
+  -e POSTGRES_PASSWORD=your_password \
+  -e POSTGRES_DB=ticketdesk \
+  -p 5432:5432 \
+  postgres:15-alpine
 ```
 
-Required environment variables:
+### 3. Environment Variables
 
-- `CLICKUP_API_TOKEN`: Your ClickUp API token
-- `CLICKUP_LIST_IDS`: Comma-separated list of ClickUp List IDs to search for tickets (e.g., `123456789,987654321`)
-- `AZURE_AD_CLIENT_ID`: Azure AD application client ID
-- `AZURE_AD_CLIENT_SECRET`: Azure AD application client secret
-- `AZURE_AD_TENANT_ID`: Set to `"common"` or `"organizations"` for multi-tenant
-- `ALLOWED_TENANTS`: Comma-separated list of allowed tenant IDs (GUIDs)
-- `NEXTAUTH_SECRET`: Random secret for NextAuth (generate with `openssl rand -base64 32`)
-- `NEXTAUTH_URL`: Your application URL (e.g., `http://localhost:3000` for development)
-- `NEXT_PUBLIC_BASE_URL`: Public base URL of the application
-- `NEXT_PUBLIC_CLICKUP_FORM_URL`: URL to your ClickUp form (e.g., `https://forms.clickup.com/xxxxx/f/xxxxx/xxxxxx`)
+Create a `.env` file with all required values:
 
-### 3. Azure AD Configuration
+```env
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://user:password@host:5432/database
 
-1. Register an application in Azure AD (Microsoft Entra ID)
-2. Configure redirect URI: `{NEXTAUTH_URL}/api/auth/callback/azure-ad`
-3. Enable multi-tenant support if needed
-4. Add required API permissions (Microsoft Graph - User.Read)
-5. Set `ALLOWED_TENANTS` to restrict access to specific tenant IDs
+# ClickUp Configuration
+CLICKUP_API_TOKEN=your_clickup_api_token
+CLICKUP_LIST_IDS=123456789,987654321
 
-### 4. ClickUp Configuration
+# Azure AD / Microsoft Entra ID
+AZURE_AD_CLIENT_ID=your_azure_ad_client_id
+AZURE_AD_CLIENT_SECRET=your_azure_ad_client_secret
+AZURE_AD_TENANT_ID=common
+ALLOWED_TENANTS=tenant-id-1,tenant-id-2
 
-1. Create one or more Lists in ClickUp where tickets will be stored
-2. Get the List IDs from the ClickUp URLs (format: `/v/li/{LIST_ID}`)
-3. Generate an API token in ClickUp Settings > Apps > API
-4. Add the token and List IDs to your `.env` file (comma-separated for multiple lists)
-5. Create a custom field for email tracking:
-   - Go to your ClickUp List settings
-   - Add a custom field with type "Email" or "Text" 
-   - Name it "Contact Email" (or similar)
-   - Note the field ID (default: `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`)
-   - If you use a different field ID, update `EMAIL_FIELD_ID` in `lib/clickup.ts`
-6. Create a ClickUp Form:
-   - Go to your ClickUp List
-   - Click on "Forms" in the menu
-   - Create a new form with the necessary fields (including "Contact Email")
-   - Publish the form and copy the public URL
-   - Add this URL to `NEXT_PUBLIC_CLICKUP_FORM_URL` in your environment variables
+# NextAuth
+NEXTAUTH_SECRET=your_nextauth_secret
+NEXTAUTH_URL=http://localhost:3000
+
+# Application
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_CLICKUP_FORM_URL=https://forms.clickup.com/xxxxx/f/xxxxx
+```
+
+### 4. Initialize Database
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Push schema to database
+npx prisma db push
+```
 
 ### 5. Run Development Server
 
@@ -91,6 +121,26 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 6. Initial Sync
+
+After first login, click the **⚡ Sync** button to fetch tickets from ClickUp into PostgreSQL.
+
+## Environment Variables Reference
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `CLICKUP_API_TOKEN` | ClickUp API token | `pk_xxxxx` |
+| `CLICKUP_LIST_IDS` | Comma-separated ClickUp List IDs | `123456789,987654321` |
+| `AZURE_AD_CLIENT_ID` | Azure AD app client ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `AZURE_AD_CLIENT_SECRET` | Azure AD app client secret | `xxxxx~xxxxx` |
+| `AZURE_AD_TENANT_ID` | Tenant ID or `common`/`organizations` | `common` |
+| `ALLOWED_TENANTS` | Comma-separated allowed tenant GUIDs | `guid1,guid2` |
+| `NEXTAUTH_SECRET` | Random secret for sessions | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | Application URL | `https://your-app.com` |
+| `NEXT_PUBLIC_BASE_URL` | Public base URL | `https://your-app.com` |
+| `NEXT_PUBLIC_CLICKUP_FORM_URL` | ClickUp form URL | `https://forms.clickup.com/xxx` |
 
 ## Building for Production
 
@@ -111,6 +161,7 @@ docker build -t ticketdesk .
 
 ```bash
 docker run -p 3000:3000 \
+  -e DATABASE_URL=postgresql://user:password@host:5432/database \
   -e CLICKUP_API_TOKEN=your_token \
   -e CLICKUP_LIST_IDS=list_id_1,list_id_2 \
   -e AZURE_AD_CLIENT_ID=your_client_id \
@@ -118,15 +169,23 @@ docker run -p 3000:3000 \
   -e AZURE_AD_TENANT_ID=common \
   -e ALLOWED_TENANTS=tenant-id-1,tenant-id-2 \
   -e NEXTAUTH_SECRET=your_secret \
-  -e NEXTAUTH_URL=http://localhost:3000 \
-  -e NEXT_PUBLIC_BASE_URL=http://localhost:3000 \
+  -e NEXTAUTH_URL=https://your-app.com \
+  -e NEXT_PUBLIC_BASE_URL=https://your-app.com \
   ticketdesk
 ```
 
-Or use a `.env` file:
+## Easypanel Deployment
 
-```bash
-docker run -p 3000:3000 --env-file .env ticketdesk
+1. **Create PostgreSQL service** in Easypanel
+2. **Create App service** from GitHub repository
+3. **Add environment variables** including `DATABASE_URL` pointing to PostgreSQL service
+4. **Deploy** - Prisma will auto-generate on build
+
+### Easypanel PostgreSQL Connection
+
+Use internal hostname for DATABASE_URL:
+```
+DATABASE_URL=postgresql://postgres:password@postgresql:5432/ticketdesk
 ```
 
 ## Project Structure
@@ -134,96 +193,66 @@ docker run -p 3000:3000 --env-file .env ticketdesk
 ```
 /
 ├── app/                      # Next.js App Router
-│   ├── api/                  # API routes
+│   ├── api/
 │   │   ├── auth/             # NextAuth routes
+│   │   ├── sync/             # Sync API endpoint
 │   │   └── tickets/          # Ticket API endpoints
-│   ├── tickets/              # Ticket pages
-│   │   ├── new/              # Create new ticket
-│   │   └── [id]/             # Ticket detail page
-│   ├── layout.tsx            # Root layout
-│   └── page.tsx              # Home page
+│   └── tickets/              # Ticket pages
 ├── components/               # React components
-│   └── TicketForm.tsx        # Ticket creation form
-├── lib/                      # Utility functions
-│   └── clickup.ts            # ClickUp API integration
-├── types/                    # TypeScript type definitions
-├── middleware.ts             # Route protection middleware
+├── lib/
+│   ├── auth.ts               # NextAuth configuration
+│   ├── clickup.ts            # ClickUp API integration
+│   ├── prisma.ts             # Prisma client
+│   └── sync.ts               # Sync service
+├── prisma/
+│   └── schema.prisma         # Database schema
 ├── Dockerfile                # Multi-stage Docker build
 └── next.config.mjs           # Next.js configuration
 ```
 
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/tickets` | GET | Get user's tickets from PostgreSQL |
+| `/api/tickets/[id]` | GET | Get single ticket details |
+| `/api/sync` | GET | Get sync status |
+| `/api/sync` | POST | Trigger background sync from ClickUp |
+
+## Sync Behavior
+
+- **Automatic**: Background sync triggers when data is older than 5 minutes
+- **Manual**: Click the ⚡ Sync button to force sync
+- **Progress**: Shows syncing banner during sync operation
+- **Status**: Displays last sync time in the UI
+
 ## Usage
 
-1. **Sign In**: Users from allowed Azure AD tenants can sign in with their Microsoft account
-2. **Create Ticket**: Click "Nieuw Ticket Aanmaken" to open the ClickUp form
-   - Your email address is **automatically pre-filled** in the form
-   - Complete the form in ClickUp and submit
-3. **View Tickets**: Access "Mijn Tickets" to see all tickets associated with your email
-   - Use the search bar to find specific tickets
-   - Navigate through pages (10 tickets per page)
-4. **Ticket Details**: Click on any ticket to view full details, status, and attachments
+1. **Sign In**: Users from allowed Azure AD tenants sign in with Microsoft account
+2. **Create Ticket**: Click "Nieuw Ticket" to open the ClickUp form (email pre-filled)
+3. **Sync**: Click ⚡ to sync latest tickets from ClickUp
+4. **View Tickets**: Browse your tickets with instant search
+5. **Ticket Details**: Click any ticket to view full details
 
-## Multi-List Support
+## Troubleshooting
 
-✨ **The application can search across multiple ClickUp lists simultaneously.**
+### Slow first load
+Run a sync to populate the PostgreSQL database.
 
-### How It Works:
+### Missing tickets
+Check if your email is correctly stored in the ClickUp custom field.
 
-Set the `CLICKUP_LIST_IDS` environment variable with comma-separated list IDs:
-
-```env
-CLICKUP_LIST_IDS=123456789,987654321,555555555
-```
-
-- All tickets from all configured lists are fetched **in parallel** for optimal performance
-- Results are automatically sorted by creation date (newest first)
-- If one list fails to load, others will still be displayed
-- Works with a single list or hundreds of lists
-
-### Use Cases:
-
-- **Departments**: Search across multiple department lists (IT, HR, Facilities)
-- **Projects**: Include tickets from different project lists
-- **Teams**: Combine tickets from various team lists
-- **Workspaces**: Aggregate tickets across organizational units
-
-## Ticket Filtering Configuration
-
-⚠️ **Email filtering is ACTIVE** - users only see tickets associated with their email address.
-
-### How It Works:
-
-When a user creates a ticket via the ClickUp form, their email is **automatically pre-filled** using URL parameters. The ClickUp form must save this email to the custom field with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4`.
-
-When viewing tickets, the app filters by searching for the user's email in:
-1. **Specific custom field** with ID `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` (highest priority)
-2. **Custom fields** named "email", "e-mail", "contact" or containing "email" (case insensitive fallback)
-3. **Description** text (last resort fallback)
-
-### Setup Requirements:
-
-1. Create a custom field in your ClickUp List named "Contact Email" (type: Email or Text)
-2. Add this field to your ClickUp Form
-3. The field will be automatically pre-filled when users access the form through the application
-4. Make sure the field ID matches `e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4` or update the constant in `lib/clickup.ts`
-
-### Important Notes:
-
-- ✅ Users only see tickets with their email address
-- 🔒 This provides privacy - users cannot see each other's tickets
-- ✨ Email is automatically pre-filled in the ClickUp form
-- 🔧 The ClickUp form field name must match the URL parameter: "Contact Email"
+### Database connection error
+Verify `DATABASE_URL` is correct and PostgreSQL is accessible.
 
 ## Security
 
-- All routes (except auth) are protected by middleware
+- All routes protected by NextAuth middleware
 - Only users from allowed tenants can sign in
 - All ClickUp API calls happen server-side
-- Session management via NextAuth with secure cookies
-- Input validation on both client and server
+- Tickets filtered by user email (users only see their own)
+- Session management via secure cookies
 
 ## License
 
 Private/internal use only.
-
-

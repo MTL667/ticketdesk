@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getTasks, filterTasksByEmail } from "@/lib/clickup";
+import prisma from "@/lib/prisma";
+import { getLastSyncStatus, syncTicketsFromClickUp, isSyncRunning } from "@/lib/sync";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,62 +11,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const tasks = await getTasks();
-    const totalTasksSearched = tasks.length;
-    
-    // Filter tasks by email (looks in custom fields and description)
-    const userTasks = filterTasksByEmail(tasks, session.user.email);
+    const userEmail = session.user.email.toLowerCase();
 
-    // Custom field IDs
-    const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
-    
-    // Helper to extract custom field value by name (case-insensitive)
-    const getCustomFieldByName = (fields: any[] | undefined, name: string) => {
-      if (!fields) return undefined;
-      const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
-      return field?.value as string | undefined;
-    };
-
-    // Map to ticket format
-    const tickets = userTasks.map((task) => {
-      const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
-      const ticketId = ticketIdField?.value as string | undefined;
-
-      // Extract new fields from custom fields
-      const businessUnit = getCustomFieldByName(task.custom_fields, "business unit");
-      const jiraStatus = getCustomFieldByName(task.custom_fields, "jira status");
-      const jiraAssignee = getCustomFieldByName(task.custom_fields, "jira assignee");
-      const jiraUrl = getCustomFieldByName(task.custom_fields, "jira url") || 
-                      getCustomFieldByName(task.custom_fields, "jira link");
-
-      return {
-        id: task.id,
-        ticketId,
-        name: task.name,
-        description: task.description,
-        status: task.status?.status || "unknown",
-        priority: task.priority?.priority || "normal",
-        dateCreated: task.date_created,
-        dateUpdated: task.date_updated,
-        businessUnit,
-        jiraStatus,
-        jiraAssignee,
-        jiraUrl,
-        attachments: task.attachments?.map((att) => ({
-          id: att.id,
-          url: att.url,
-          title: att.title,
-        })),
-      };
+    // Get tickets from PostgreSQL (filtered by user email)
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        userEmail: {
+          equals: userEmail,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        clickupCreatedAt: "desc",
+      },
     });
 
+    // Get total count for metadata
+    const totalTickets = await prisma.ticket.count();
+
+    // Get last sync info
+    const lastSync = await getLastSyncStatus();
+    
+    // Check if we should trigger a background sync
+    const shouldSync = !lastSync || 
+      lastSync.status === "failed" ||
+      (lastSync.completedAt && new Date().getTime() - lastSync.completedAt.getTime() > 5 * 60 * 1000); // 5 minutes
+
+    if (shouldSync && !(await isSyncRunning())) {
+      // Trigger background sync (don't await)
+      syncTicketsFromClickUp().catch(console.error);
+    }
+
+    // Map to API format
+    const ticketsData = tickets.map((ticket) => ({
+      id: ticket.id,
+      ticketId: ticket.ticketId,
+      name: ticket.name,
+      description: ticket.description || "",
+      status: ticket.status,
+      priority: ticket.priority,
+      dateCreated: ticket.clickupCreatedAt.getTime().toString(),
+      dateUpdated: ticket.clickupUpdatedAt.getTime().toString(),
+      businessUnit: ticket.businessUnit,
+      jiraStatus: ticket.jiraStatus,
+      jiraAssignee: ticket.jiraAssignee,
+      jiraUrl: ticket.jiraUrl,
+    }));
+
     return NextResponse.json({
-      tickets,
+      tickets: ticketsData,
       metadata: {
-        totalTasksSearched,
+        totalTasksSearched: totalTickets,
         userTicketsFound: tickets.length,
-        listCount: process.env.CLICKUP_LIST_IDS?.split(',').length || 1,
-      }
+        listCount: process.env.CLICKUP_LIST_IDS?.split(",").length || 1,
+        lastSyncAt: lastSync?.completedAt?.toISOString(),
+        syncStatus: lastSync?.status,
+      },
     });
   } catch (error) {
     console.error("Error fetching tickets:", error);
@@ -75,4 +76,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

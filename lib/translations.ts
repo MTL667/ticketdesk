@@ -90,6 +90,14 @@ export const translations = {
     jiraUrl: "Jira Link",
     openInJira: "Open in Jira",
     inDevelopment: "in ontwikkeling",
+    
+    // Sync
+    sync: "Sync",
+    syncing: "Synchroniseren...",
+    syncWithClickUp: "Synchroniseer met ClickUp",
+    syncingTickets: "Tickets worden gesynchroniseerd met ClickUp...",
+    synced: "Gesynchroniseerd",
+    total: "totaal",
   },
   fr: {
     // Navigation
@@ -180,6 +188,14 @@ export const translations = {
     jiraUrl: "Lien Jira",
     openInJira: "Ouvrir dans Jira",
     inDevelopment: "en développement",
+    
+    // Sync
+    sync: "Sync",
+    syncing: "Synchronisation...",
+    syncWithClickUp: "Synchroniser avec ClickUp",
+    syncingTickets: "Synchronisation des tickets avec ClickUp...",
+    synced: "Synchronisé",
+    total: "total",
   },
   en: {
     // Navigation
@@ -270,6 +286,14 @@ export const translations = {
     jiraUrl: "Jira Link",
     openInJira: "Open in Jira",
     inDevelopment: "in development",
+    
+    // Sync
+    sync: "Sync",
+    syncing: "Syncing...",
+    syncWithClickUp: "Sync with ClickUp",
+    syncingTickets: "Syncing tickets with ClickUp...",
+    synced: "Synced",
+    total: "total",
   },
 } as const;
 

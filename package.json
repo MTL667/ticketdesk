@@ -4,16 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "next": "^15.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "next-auth": "^5.0.0-beta.25",
-    "@auth/core": "^0.37.0"
+    "@auth/core": "^0.37.0",
+    "@prisma/client": "^6.8.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -24,7 +29,8 @@
     "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.18.0",
-    "eslint-config-next": "^15.4.0"
+    "eslint-config-next": "^15.4.0",
+    "prisma": "^6.8.2"
   }
 }
 

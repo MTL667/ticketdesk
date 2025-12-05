@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getTask, filterTasksByEmail } from "@/lib/clickup";
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -14,58 +14,41 @@ export async function GET(
     }
 
     const { id } = await params;
-    const task = await getTask(id);
+    const userEmail = session.user.email.toLowerCase();
 
-    // Verify task belongs to user
-    const userTasks = filterTasksByEmail([task], session.user.email);
-    if (userTasks.length === 0) {
+    // Get ticket from PostgreSQL
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id: id,
+        userEmail: {
+          equals: userEmail,
+          mode: "insensitive",
+        },
+      },
+    });
+
+    if (!ticket) {
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
     }
 
-    // Custom field IDs
-    const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
-    
-    // Helper to extract custom field value by name (case-insensitive)
-    const getCustomFieldByName = (fields: any[] | undefined, name: string) => {
-      if (!fields) return undefined;
-      const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
-      return field?.value as string | undefined;
+    // Map to API format
+    const ticketData = {
+      id: ticket.id,
+      ticketId: ticket.ticketId,
+      name: ticket.name,
+      description: ticket.description || "",
+      fullDescription: ticket.description || "",
+      status: ticket.status,
+      priority: ticket.priority || "normal",
+      dateCreated: ticket.clickupCreatedAt.getTime().toString(),
+      dateUpdated: ticket.clickupUpdatedAt.getTime().toString(),
+      businessUnit: ticket.businessUnit,
+      jiraStatus: ticket.jiraStatus,
+      jiraAssignee: ticket.jiraAssignee,
+      jiraUrl: ticket.jiraUrl,
     };
 
-    const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
-    const ticketId = ticketIdField?.value as string | undefined;
-
-    // Extract new fields from custom fields
-    const businessUnit = getCustomFieldByName(task.custom_fields, "business unit");
-    const jiraStatus = getCustomFieldByName(task.custom_fields, "jira status");
-    const jiraAssignee = getCustomFieldByName(task.custom_fields, "jira assignee");
-    const jiraUrl = getCustomFieldByName(task.custom_fields, "jira url") || 
-                    getCustomFieldByName(task.custom_fields, "jira link");
-
-    const description = task.description || "";
-
-    const ticket = {
-      id: task.id,
-      ticketId,
-      name: task.name,
-      description: description,
-      fullDescription: description,
-      status: task.status?.status || "unknown",
-      priority: task.priority?.priority || "normal",
-      dateCreated: task.date_created,
-      dateUpdated: task.date_updated,
-      businessUnit,
-      jiraStatus,
-      jiraAssignee,
-      jiraUrl,
-      attachments: task.attachments?.map((att) => ({
-        id: att.id,
-        url: att.url,
-        title: att.title,
-      })),
-    };
-
-    return NextResponse.json(ticket);
+    return NextResponse.json(ticketData);
   } catch (error) {
     console.error("Error fetching ticket:", error);
     return NextResponse.json(
@@ -74,5 +57,3 @@ export async function GET(
     );
   }
 }
-
-

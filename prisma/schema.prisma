@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Synced tickets from ClickUp
+model Ticket {
+  id              String    @id // ClickUp task ID
+  ticketId        String?   // Custom field: Ticket ID (e.g., ZTIMER-39647)
+  name            String
+  description     String?   @db.Text
+  status          String
+  priority        String?
+  
+  // User association
+  userEmail       String    // Email of the ticket owner
+  
+  // Additional fields
+  businessUnit    String?
+  jiraStatus      String?
+  jiraAssignee    String?
+  jiraUrl         String?
+  
+  // Timestamps from ClickUp
+  clickupCreatedAt DateTime
+  clickupUpdatedAt DateTime
+  
+  // Local sync timestamps
+  syncedAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Indexes for fast queries
+  @@index([userEmail])
+  @@index([status])
+  @@index([ticketId])
+  @@index([syncedAt])
+}
+
+// Track sync status
+model SyncLog {
+  id            String   @id @default(cuid())
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  status        String   // "running", "completed", "failed"
+  ticketsSynced Int      @default(0)
+  ticketsTotal  Int      @default(0)
+  errorMessage  String?  @db.Text
+  
+  @@index([startedAt])
+}
+
