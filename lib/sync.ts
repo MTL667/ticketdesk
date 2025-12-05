@@ -1,7 +1,10 @@
 import prisma from "./prisma";
-import { getTasks, ClickUpTask } from "./clickup";
 
-// Custom field IDs (same as in the API routes)
+const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
+const CLICKUP_LIST_IDS = process.env.CLICKUP_LIST_IDS;
+const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
+
+// Custom field IDs
 const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
 const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
 
@@ -14,20 +17,17 @@ function toStringOrNull(value: unknown): string | null {
   return null;
 }
 
-// Helper to extract custom field value by name (case-insensitive)
-// Handles dropdown fields by looking up the option label
+// Helper to extract custom field value by name
 function getCustomFieldByName(fields: any[] | undefined, name: string): string | null {
   if (!fields) return null;
   const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
   if (!field) return null;
   
-  // Handle dropdown fields - value is the index, need to look up the option
   if (field.type === "drop_down" && field.type_config?.options && typeof field.value === "number") {
     const option = field.type_config.options[field.value];
     return option?.name || toStringOrNull(field.value);
   }
   
-  // Handle labels field (array of label objects)
   if (field.type === "labels" && Array.isArray(field.value)) {
     const labels = field.value.map((v: any) => v.label || v.name || String(v)).join(", ");
     return labels || null;
@@ -42,7 +42,6 @@ function getCustomFieldById(fields: any[] | undefined, id: string): string | nul
   const field = fields.find(f => f.id === id);
   if (!field) return null;
   
-  // Handle dropdown fields
   if (field.type === "drop_down" && field.type_config?.options && typeof field.value === "number") {
     const option = field.type_config.options[field.value];
     return option?.name || toStringOrNull(field.value);
@@ -51,13 +50,11 @@ function getCustomFieldById(fields: any[] | undefined, id: string): string | nul
   return toStringOrNull(field.value);
 }
 
-// Extract email from task (from custom field or description)
-function extractEmail(task: ClickUpTask): string | null {
-  // First try the email custom field
+// Extract email from task
+function extractEmail(task: any): string | null {
   const emailFromField = getCustomFieldById(task.custom_fields, EMAIL_FIELD_ID);
   if (emailFromField && emailFromField.includes("@")) return emailFromField.toLowerCase();
 
-  // Try other email-like custom fields
   if (task.custom_fields) {
     for (const field of task.custom_fields) {
       const fieldName = field.name?.toLowerCase() || "";
@@ -70,7 +67,6 @@ function extractEmail(task: ClickUpTask): string | null {
     }
   }
 
-  // Last resort: try to extract from description
   if (task.description) {
     const emailMatch = task.description.match(/[\w.-]+@[\w.-]+\.\w+/i);
     if (emailMatch) return emailMatch[0].toLowerCase();
@@ -79,8 +75,8 @@ function extractEmail(task: ClickUpTask): string | null {
   return null;
 }
 
-// Convert ClickUp task to database ticket format
-function taskToTicket(task: ClickUpTask) {
+// Convert task to database format
+function taskToTicket(task: any) {
   const email = extractEmail(task);
   
   return {
@@ -101,6 +97,64 @@ function taskToTicket(task: ClickUpTask) {
   };
 }
 
+// Fetch a single page of tasks from ClickUp
+async function fetchTasksPage(listId: string, page: number): Promise<{ tasks: any[], hasMore: boolean }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+  
+  try {
+    const response = await fetch(
+      `${CLICKUP_API_BASE}/list/${listId}/task?archived=false&page=${page}&subtasks=false&include_closed=true`,
+      {
+        headers: { "Authorization": CLICKUP_API_TOKEN! },
+        signal: controller.signal,
+      }
+    );
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`Error fetching page ${page} from list ${listId}:`, error);
+      return { tasks: [], hasMore: false };
+    }
+    
+    const data = await response.json();
+    const tasks = data.tasks || [];
+    
+    return {
+      tasks,
+      hasMore: tasks.length >= 100, // ClickUp returns max 100 per page
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error(`Exception fetching page ${page} from list ${listId}:`, error);
+    return { tasks: [], hasMore: false };
+  }
+}
+
+// Save tasks to database
+async function saveTasks(tasks: any[]): Promise<number> {
+  let saved = 0;
+  
+  for (const task of tasks) {
+    try {
+      const ticketData = taskToTicket(task);
+      
+      await prisma.ticket.upsert({
+        where: { id: task.id },
+        update: { ...ticketData, syncedAt: new Date() },
+        create: { ...ticketData, syncedAt: new Date() },
+      });
+      saved++;
+    } catch (error) {
+      console.error(`Error saving task ${task.id}:`, error);
+    }
+  }
+  
+  return saved;
+}
+
 export interface SyncResult {
   success: boolean;
   ticketsSynced: number;
@@ -109,99 +163,117 @@ export interface SyncResult {
   error?: string;
 }
 
-// Main sync function
+// Main sync function - fetches and saves in batches
 export async function syncTicketsFromClickUp(): Promise<SyncResult> {
   const startTime = Date.now();
   
-  // Create sync log entry
+  if (!CLICKUP_LIST_IDS) {
+    return { success: false, ticketsSynced: 0, ticketsTotal: 0, duration: 0, error: "CLICKUP_LIST_IDS not set" };
+  }
+  
+  const listIds = CLICKUP_LIST_IDS.split(',').map(id => id.trim()).filter(id => id.length > 0);
+  
+  // Create sync log
   const syncLog = await prisma.syncLog.create({
-    data: {
-      status: "running",
-    },
+    data: { status: "running" },
   });
-
+  
+  console.log(`=== Starting sync (ID: ${syncLog.id}) ===`);
+  console.log(`Lists to sync: ${listIds.join(', ')}`);
+  
+  let totalSynced = 0;
+  let totalFetched = 0;
+  
   try {
-    console.log("Starting ticket sync from ClickUp...");
-    
-    // Fetch all tasks from ClickUp
-    const tasks = await getTasks();
-    console.log(`Fetched ${tasks.length} tasks from ClickUp`);
-
-    let syncedCount = 0;
-
-    // Process in batches to avoid overwhelming the database
-    const batchSize = 50;
-    for (let i = 0; i < tasks.length; i += batchSize) {
-      const batch = tasks.slice(i, i + batchSize);
+    for (const listId of listIds) {
+      console.log(`\n--- Syncing list ${listId} ---`);
       
-      // Upsert each ticket
-      await Promise.all(
-        batch.map(async (task) => {
-          try {
-            const ticketData = taskToTicket(task);
-            
-            await prisma.ticket.upsert({
-              where: { id: task.id },
-              update: {
-                ...ticketData,
-                syncedAt: new Date(),
-              },
-              create: {
-                ...ticketData,
-                syncedAt: new Date(),
-              },
-            });
-            syncedCount++;
-          } catch (error) {
-            console.error(`Error syncing task ${task.id}:`, error);
-          }
-        })
-      );
-
-      console.log(`Synced ${Math.min(i + batchSize, tasks.length)}/${tasks.length} tickets`);
+      let page = 0;
+      let hasMore = true;
+      let listTotal = 0;
+      
+      while (hasMore) {
+        console.log(`Fetching page ${page}...`);
+        
+        const { tasks, hasMore: more } = await fetchTasksPage(listId, page);
+        hasMore = more;
+        
+        if (tasks.length > 0) {
+          console.log(`Got ${tasks.length} tasks, saving to database...`);
+          const saved = await saveTasks(tasks);
+          totalSynced += saved;
+          totalFetched += tasks.length;
+          listTotal += tasks.length;
+          
+          console.log(`✓ Page ${page}: saved ${saved}/${tasks.length} tasks (list total: ${listTotal})`);
+          
+          // Update sync log with progress
+          await prisma.syncLog.update({
+            where: { id: syncLog.id },
+            data: { 
+              ticketsSynced: totalSynced,
+              ticketsTotal: totalFetched,
+            },
+          });
+        }
+        
+        page++;
+        
+        // Small delay between pages
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log(`✓ List ${listId} complete: ${listTotal} tasks`);
+      
+      // Delay between lists
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-
+    
     const duration = Date.now() - startTime;
-
-    // Update sync log
+    
+    // Mark as completed
     await prisma.syncLog.update({
       where: { id: syncLog.id },
       data: {
         status: "completed",
         completedAt: new Date(),
-        ticketsSynced: syncedCount,
-        ticketsTotal: tasks.length,
+        ticketsSynced: totalSynced,
+        ticketsTotal: totalFetched,
       },
     });
-
-    console.log(`Sync completed: ${syncedCount}/${tasks.length} tickets in ${duration}ms`);
-
+    
+    console.log(`\n=== Sync completed ===`);
+    console.log(`Total: ${totalSynced}/${totalFetched} tasks in ${Math.round(duration / 1000)}s`);
+    
     return {
       success: true,
-      ticketsSynced: syncedCount,
-      ticketsTotal: tasks.length,
+      ticketsSynced: totalSynced,
+      ticketsTotal: totalFetched,
       duration,
     };
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-    // Update sync log with error
+    
     await prisma.syncLog.update({
       where: { id: syncLog.id },
       data: {
         status: "failed",
         completedAt: new Date(),
         errorMessage,
+        ticketsSynced: totalSynced,
+        ticketsTotal: totalFetched,
       },
     });
-
-    console.error("Sync failed:", errorMessage);
-
+    
+    console.error(`Sync failed: ${errorMessage}`);
+    
     return {
       success: false,
-      ticketsSynced: 0,
-      ticketsTotal: 0,
+      ticketsSynced: totalSynced,
+      ticketsTotal: totalFetched,
       duration,
       error: errorMessage,
     };
@@ -223,21 +295,17 @@ export async function isSyncRunning(): Promise<boolean> {
   });
   
   if (!running) {
-    console.log("No running sync found");
     return false;
   }
   
-  console.log(`Found running sync: ${running.id}, started at ${running.startedAt}`);
-  
-  // Consider sync as stuck if running for more than 15 minutes
+  // Consider stuck if running for more than 20 minutes
   if (running.startedAt) {
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    if (running.startedAt < fifteenMinutesAgo) {
-      // Mark as failed
-      console.log(`Marking stuck sync ${running.id} as failed (older than 15 minutes)`);
+    const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+    if (running.startedAt < twentyMinutesAgo) {
+      console.log(`Marking stuck sync ${running.id} as failed`);
       await prisma.syncLog.update({
         where: { id: running.id },
-        data: { status: "failed", errorMessage: "Sync timed out after 15 minutes" },
+        data: { status: "failed", errorMessage: "Sync timed out after 20 minutes" },
       });
       return false;
     }
