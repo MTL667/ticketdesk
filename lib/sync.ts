@@ -5,33 +5,66 @@ import { getTasks, ClickUpTask } from "./clickup";
 const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
 const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
 
+// Helper to safely convert any value to string or null
+function toStringOrNull(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value || null;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return String(value);
+  return null;
+}
+
 // Helper to extract custom field value by name (case-insensitive)
-function getCustomFieldByName(fields: any[] | undefined, name: string): string | undefined {
-  if (!fields) return undefined;
+// Handles dropdown fields by looking up the option label
+function getCustomFieldByName(fields: any[] | undefined, name: string): string | null {
+  if (!fields) return null;
   const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
-  return field?.value as string | undefined;
+  if (!field) return null;
+  
+  // Handle dropdown fields - value is the index, need to look up the option
+  if (field.type === "drop_down" && field.type_config?.options && typeof field.value === "number") {
+    const option = field.type_config.options[field.value];
+    return option?.name || toStringOrNull(field.value);
+  }
+  
+  // Handle labels field (array of label objects)
+  if (field.type === "labels" && Array.isArray(field.value)) {
+    const labels = field.value.map((v: any) => v.label || v.name || String(v)).join(", ");
+    return labels || null;
+  }
+  
+  return toStringOrNull(field.value);
 }
 
 // Helper to extract custom field value by ID
-function getCustomFieldById(fields: any[] | undefined, id: string): string | undefined {
-  if (!fields) return undefined;
+function getCustomFieldById(fields: any[] | undefined, id: string): string | null {
+  if (!fields) return null;
   const field = fields.find(f => f.id === id);
-  return field?.value as string | undefined;
+  if (!field) return null;
+  
+  // Handle dropdown fields
+  if (field.type === "drop_down" && field.type_config?.options && typeof field.value === "number") {
+    const option = field.type_config.options[field.value];
+    return option?.name || toStringOrNull(field.value);
+  }
+  
+  return toStringOrNull(field.value);
 }
 
 // Extract email from task (from custom field or description)
 function extractEmail(task: ClickUpTask): string | null {
   // First try the email custom field
   const emailFromField = getCustomFieldById(task.custom_fields, EMAIL_FIELD_ID);
-  if (emailFromField) return emailFromField.toLowerCase();
+  if (emailFromField && emailFromField.includes("@")) return emailFromField.toLowerCase();
 
   // Try other email-like custom fields
   if (task.custom_fields) {
     for (const field of task.custom_fields) {
       const fieldName = field.name?.toLowerCase() || "";
       if (fieldName.includes("email") || fieldName.includes("e-mail") || fieldName.includes("contact")) {
-        if (typeof field.value === "string" && field.value.includes("@")) {
-          return field.value.toLowerCase();
+        const value = toStringOrNull(field.value);
+        if (value && value.includes("@")) {
+          return value.toLowerCase();
         }
       }
     }
@@ -52,17 +85,17 @@ function taskToTicket(task: ClickUpTask) {
   
   return {
     id: task.id,
-    ticketId: getCustomFieldById(task.custom_fields, TICKET_ID_FIELD_ID) || null,
+    ticketId: getCustomFieldById(task.custom_fields, TICKET_ID_FIELD_ID),
     name: task.name,
     description: task.description || null,
     status: task.status?.status || "unknown",
     priority: task.priority?.priority || "normal",
     userEmail: email || "unknown@unknown.com",
-    businessUnit: getCustomFieldByName(task.custom_fields, "business unit") || null,
-    jiraStatus: getCustomFieldByName(task.custom_fields, "jira status") || null,
-    jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee") || null,
+    businessUnit: getCustomFieldByName(task.custom_fields, "business unit"),
+    jiraStatus: getCustomFieldByName(task.custom_fields, "jira status"),
+    jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee"),
     jiraUrl: getCustomFieldByName(task.custom_fields, "jira url") || 
-             getCustomFieldByName(task.custom_fields, "jira link") || null,
+             getCustomFieldByName(task.custom_fields, "jira link"),
     clickupCreatedAt: new Date(parseInt(task.date_created)),
     clickupUpdatedAt: new Date(parseInt(task.date_updated)),
   };
@@ -205,4 +238,3 @@ export async function isSyncRunning(): Promise<boolean> {
   
   return false;
 }
-
