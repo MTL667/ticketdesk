@@ -9,60 +9,58 @@ interface TicketListProps {
   tickets: Ticket[];
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, language: string): string {
   try {
     const date = new Date(parseInt(dateString));
-    return new Intl.DateTimeFormat("nl-BE", {
-      year: "numeric",
-      month: "long",
+    return new Intl.DateTimeFormat(language === 'nl' ? 'nl-BE' : language === 'fr' ? 'fr-BE' : 'en-US', {
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      month: "short",
+      year: "numeric",
     }).format(date);
   } catch {
     return dateString;
   }
 }
 
-function getStatusColor(status: string): string {
+function getStatusStyle(status: string): { bg: string; text: string; label: string } {
   const statusLower = status.toLowerCase();
-  if (statusLower.includes("done") || statusLower.includes("complete")) {
-    return "bg-green-100 text-green-800";
+  if (statusLower.includes("done") || statusLower.includes("complete") || statusLower.includes("closed")) {
+    return { bg: "bg-green-500", text: "text-white", label: status };
   }
-  if (statusLower.includes("progress") || statusLower.includes("doing")) {
-    return "bg-blue-100 text-blue-800";
+  if (statusLower.includes("progress") || statusLower.includes("doing") || statusLower.includes("development")) {
+    return { bg: "bg-purple-500", text: "text-white", label: status };
   }
-  if (statusLower.includes("waiting") || statusLower.includes("pending")) {
-    return "bg-yellow-100 text-yellow-800";
+  if (statusLower.includes("waiting") || statusLower.includes("pending") || statusLower.includes("review")) {
+    return { bg: "bg-yellow-500", text: "text-white", label: status };
   }
-  if (statusLower.includes("closed") || statusLower.includes("cancel")) {
-    return "bg-gray-100 text-gray-800";
+  if (statusLower.includes("new") || statusLower.includes("open") || statusLower.includes("to do")) {
+    return { bg: "bg-blue-500", text: "text-white", label: status };
   }
-  return "bg-gray-100 text-gray-800";
+  return { bg: "bg-gray-500", text: "text-white", label: status };
 }
 
-function getPriorityColor(priority: string): string {
-  const priorityLower = priority.toLowerCase();
+function getPriorityStyle(priority: string): { bg: string; text: string } {
+  const priorityLower = (priority || "normal").toLowerCase();
   if (priorityLower === "urgent") {
-    return "bg-red-100 text-red-800";
+    return { bg: "bg-red-100", text: "text-red-700" };
   }
   if (priorityLower === "high") {
-    return "bg-orange-100 text-orange-800";
+    return { bg: "bg-orange-100", text: "text-orange-700" };
   }
   if (priorityLower === "normal") {
-    return "bg-blue-100 text-blue-800";
+    return { bg: "bg-blue-100", text: "text-blue-700" };
   }
   if (priorityLower === "low") {
-    return "bg-gray-100 text-gray-800";
+    return { bg: "bg-gray-100", text: "text-gray-700" };
   }
-  return "bg-gray-100 text-gray-800";
+  return { bg: "bg-gray-100", text: "text-gray-700" };
 }
 
 export function TicketList({ tickets }: TicketListProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 15;
 
   // Filter tickets based on search query
   const filteredTickets = useMemo(() => {
@@ -73,7 +71,7 @@ export function TicketList({ tickets }: TicketListProps) {
       (ticket) =>
         ticket.name.toLowerCase().includes(query) ||
         ticket.description.toLowerCase().includes(query) ||
-        ticket.id.toLowerCase().includes(query) ||
+        ticket.ticketId?.toLowerCase().includes(query) ||
         ticket.status.toLowerCase().includes(query)
     );
   }, [tickets, searchQuery]);
@@ -94,35 +92,35 @@ export function TicketList({ tickets }: TicketListProps) {
   return (
     <>
       {/* Search Bar */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="relative">
           <input
             type="text"
             placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
             🔍
           </div>
           {searchQuery && (
             <button
               onClick={() => handleSearchChange("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
             >
               ✕
             </button>
           )}
         </div>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-1 text-xs text-gray-500">
           {filteredTickets.length} {t("ticketsCount")} {tickets.length} {t("ticketsWord")}
         </p>
       </div>
 
-      {/* Ticket List */}
+      {/* Ticket List - Compact View */}
       {paginatedTickets.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+        <div className="bg-white rounded-lg shadow-sm p-8 text-center border border-gray-200">
           {searchQuery ? (
             <>
               <p className="text-gray-600 mb-2">
@@ -130,22 +128,18 @@ export function TicketList({ tickets }: TicketListProps) {
               </p>
               <button
                 onClick={() => handleSearchChange("")}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
               >
                 {t("clearSearch")}
               </button>
             </>
           ) : (
             <>
-              <div className="mb-4">
-                <p className="text-gray-600 mb-2">{t("noTickets")}</p>
-                <p className="text-sm text-gray-500">
-                  {t("noTicketsHelp")}
-                </p>
-              </div>
+              <p className="text-gray-600 mb-2">{t("noTickets")}</p>
+              <p className="text-sm text-gray-500 mb-4">{t("noTicketsHelp")}</p>
               <Link
                 href="/tickets/new"
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
               >
                 {t("createFirstTicket")}
               </Link>
@@ -154,131 +148,86 @@ export function TicketList({ tickets }: TicketListProps) {
         </div>
       ) : (
         <>
-          <div className="space-y-4">
-            {paginatedTickets.map((ticket) => (
-              <Link
-                key={ticket.id}
-                href={`/tickets/${ticket.id}`}
-                className="block bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                      {ticket.name}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                          ticket.status
-                        )}`}
-                      >
-                        {ticket.status}
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(
-                          ticket.priority || "normal"
-                        )}`}
-                      >
+          <div className="space-y-2">
+            {paginatedTickets.map((ticket) => {
+              const statusStyle = getStatusStyle(ticket.status);
+              const priorityStyle = getPriorityStyle(ticket.priority || "normal");
+              
+              return (
+                <Link
+                  key={ticket.id}
+                  href={`/tickets/${ticket.id}`}
+                  className="block bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all"
+                >
+                  {/* Compact ticket row */}
+                  <div className="px-4 py-3 flex items-center gap-3">
+                    {/* Left: Tags */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Priority tag */}
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityStyle.bg} ${priorityStyle.text}`}>
                         {ticket.priority || "normal"}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      {ticket.ticketId && (
-                        <p>
-                          <span className="font-medium">{t("ticketId")}:</span>{" "}
-                          <span className="font-mono text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
+
+                    {/* Center: Title and Ticket ID */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-gray-900 truncate text-sm">
+                          {ticket.name}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                        {ticket.ticketId && (
+                          <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">
                             {ticket.ticketId}
                           </span>
-                        </p>
-                      )}
-                      <p>
-                        <span className="font-medium">{t("clickupId")}:</span>{" "}
-                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">
-                          {ticket.id}
-                        </span>
-                      </p>
-                      <p>
-                        <span className="font-medium">{t("created")}:</span>{" "}
-                        {formatDate(ticket.dateCreated)}
-                      </p>
+                        )}
+                        <span>{formatDate(ticket.dateCreated, language)}</span>
+                        {ticket.jiraStatus && (
+                          <span className="text-purple-600">Jira: {ticket.jiraStatus}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Status badge */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`px-3 py-1 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+                        {statusStyle.label}
+                      </span>
+                      <span className="text-gray-400 text-sm">›</span>
                     </div>
                   </div>
-                  <div className="ml-4">
-                    <span className="text-gray-400">→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-center gap-2">
+            <div className="mt-6 flex items-center justify-center gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ← {t("previous")}
               </button>
               
-              <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  // Show first page, last page, current page, and pages around current
-                  const showPage =
-                    page === 1 ||
-                    page === totalPages ||
-                    Math.abs(page - currentPage) <= 1;
-                  
-                  const showEllipsis =
-                    (page === 2 && currentPage > 3) ||
-                    (page === totalPages - 1 && currentPage < totalPages - 2);
-
-                  if (showEllipsis) {
-                    return (
-                      <span
-                        key={page}
-                        className="px-3 py-2 text-gray-500"
-                      >
-                        ...
-                      </span>
-                    );
-                  }
-
-                  if (!showPage) return null;
-
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-4 py-2 rounded-md ${
-                        currentPage === page
-                          ? "bg-blue-600 text-white"
-                          : "border border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="text-sm text-gray-600 px-3">
+                {t("page")} {currentPage} {t("of")} {totalPages}
+              </span>
 
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {t("next")} →
               </button>
             </div>
           )}
-
-          <p className="mt-4 text-center text-sm text-gray-500">
-            {t("page")} {currentPage} {t("of")} {totalPages}
-          </p>
         </>
       )}
     </>
   );
 }
-

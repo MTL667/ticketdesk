@@ -77,9 +77,19 @@ export const translations = {
     // Loading
     loadingTickets: "Tickets worden geladen...",
     loadingSubtext: "Even geduld, we verzamelen je tickets 📋",
+    loadingTicket: "Ticket laden...",
+    loadingForm: "Formulier laden...",
     
     // Dates
     created: "Aangemaakt",
+    
+    // New ticket detail fields
+    businessUnit: "Business Unit",
+    jiraStatus: "Jira Status",
+    jiraAssignee: "Jira Assignee",
+    jiraUrl: "Jira Link",
+    openInJira: "Open in Jira",
+    inDevelopment: "in ontwikkeling",
   },
   fr: {
     // Navigation
@@ -157,9 +167,19 @@ export const translations = {
     // Loading
     loadingTickets: "Chargement des tickets...",
     loadingSubtext: "Veuillez patienter, nous récupérons vos tickets 📋",
+    loadingTicket: "Chargement du ticket...",
+    loadingForm: "Chargement du formulaire...",
     
     // Dates
     created: "Créé",
+    
+    // New ticket detail fields
+    businessUnit: "Business Unit",
+    jiraStatus: "Statut Jira",
+    jiraAssignee: "Assigné Jira",
+    jiraUrl: "Lien Jira",
+    openInJira: "Ouvrir dans Jira",
+    inDevelopment: "en développement",
   },
   en: {
     // Navigation
@@ -237,9 +257,19 @@ export const translations = {
     // Loading
     loadingTickets: "Loading tickets...",
     loadingSubtext: "Please wait, we're gathering your tickets 📋",
+    loadingTicket: "Loading ticket...",
+    loadingForm: "Loading form...",
     
     // Dates
     created: "Created",
+    
+    // New ticket detail fields
+    businessUnit: "Business Unit",
+    jiraStatus: "Jira Status",
+    jiraAssignee: "Jira Assignee",
+    jiraUrl: "Jira Link",
+    openInJira: "Open in Jira",
+    inDevelopment: "in development",
   },
 } as const;
 

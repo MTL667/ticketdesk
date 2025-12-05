@@ -22,10 +22,25 @@ export async function GET(
       return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
     }
 
-    // Extract Ticket ID from custom field
+    // Custom field IDs
     const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
+    
+    // Helper to extract custom field value by name (case-insensitive)
+    const getCustomFieldByName = (fields: any[] | undefined, name: string) => {
+      if (!fields) return undefined;
+      const field = fields.find(f => f.name?.toLowerCase().includes(name.toLowerCase()));
+      return field?.value as string | undefined;
+    };
+
     const ticketIdField = task.custom_fields?.find(f => f.id === TICKET_ID_FIELD_ID);
     const ticketId = ticketIdField?.value as string | undefined;
+
+    // Extract new fields from custom fields
+    const businessUnit = getCustomFieldByName(task.custom_fields, "business unit");
+    const jiraStatus = getCustomFieldByName(task.custom_fields, "jira status");
+    const jiraAssignee = getCustomFieldByName(task.custom_fields, "jira assignee");
+    const jiraUrl = getCustomFieldByName(task.custom_fields, "jira url") || 
+                    getCustomFieldByName(task.custom_fields, "jira link");
 
     const description = task.description || "";
 
@@ -39,6 +54,10 @@ export async function GET(
       priority: task.priority?.priority || "normal",
       dateCreated: task.date_created,
       dateUpdated: task.date_updated,
+      businessUnit,
+      jiraStatus,
+      jiraAssignee,
+      jiraUrl,
       attachments: task.attachments?.map((att) => ({
         id: att.id,
         url: att.url,
