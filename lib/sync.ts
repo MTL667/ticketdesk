@@ -222,19 +222,21 @@ export async function isSyncRunning(): Promise<boolean> {
     orderBy: { startedAt: "desc" },
   });
   
-  // Consider sync as stuck if running for more than 10 minutes
-  if (running && running.startedAt) {
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    if (running.startedAt < tenMinutesAgo) {
+  if (!running) return false;
+  
+  // Consider sync as stuck if running for more than 15 minutes
+  if (running.startedAt) {
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    if (running.startedAt < fifteenMinutesAgo) {
       // Mark as failed
+      console.log(`Marking stuck sync ${running.id} as failed`);
       await prisma.syncLog.update({
         where: { id: running.id },
-        data: { status: "failed", errorMessage: "Sync timed out" },
+        data: { status: "failed", errorMessage: "Sync timed out after 15 minutes" },
       });
       return false;
     }
-    return true;
   }
   
-  return false;
+  return true;
 }

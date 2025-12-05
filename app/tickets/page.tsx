@@ -95,33 +95,74 @@ export default function TicketsPage() {
 
   const triggerSync = async () => {
     setIsSyncing(true);
+    let pollIntervalId: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    const cleanup = () => {
+      if (pollIntervalId) clearInterval(pollIntervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+    
     try {
       const response = await fetch("/api/sync", { method: "POST" });
-      if (response.ok) {
+      
+      // Start polling regardless of response (409 means already running)
+      if (response.ok || response.status === 409) {
+        let lastSyncId: string | null = null;
+        let noChangeCount = 0;
+        
         // Poll for completion
-        const pollInterval = setInterval(async () => {
-          const statusResponse = await fetch("/api/sync");
-          if (statusResponse.ok) {
-            const data = await statusResponse.json();
-            setSyncStatus(data);
-            if (!data.isRunning) {
-              clearInterval(pollInterval);
-              setIsSyncing(false);
-              // Refresh tickets after sync completes
-              fetchTickets(true);
+        pollIntervalId = setInterval(async () => {
+          try {
+            const statusResponse = await fetch("/api/sync");
+            if (statusResponse.ok) {
+              const data = await statusResponse.json();
+              setSyncStatus(data);
+              
+              // Check if sync completed
+              if (!data.isRunning) {
+                cleanup();
+                setIsSyncing(false);
+                fetchTickets(true);
+                return;
+              }
+              
+              // Check if sync is stuck (same sync ID, no progress)
+              if (data.lastSync?.id === lastSyncId) {
+                noChangeCount++;
+                if (noChangeCount > 30) { // ~60 seconds of no change
+                  console.log("Sync appears stuck, stopping poll");
+                  cleanup();
+                  setIsSyncing(false);
+                  fetchTickets(true);
+                  return;
+                }
+              } else {
+                lastSyncId = data.lastSync?.id;
+                noChangeCount = 0;
+              }
             }
+          } catch (pollError) {
+            console.error("Error polling sync status:", pollError);
           }
         }, 2000);
 
-        // Timeout after 5 minutes
-        setTimeout(() => {
-          clearInterval(pollInterval);
+        // Timeout after 10 minutes
+        timeoutId = setTimeout(() => {
+          console.log("Sync timeout reached");
+          cleanup();
           setIsSyncing(false);
           fetchTickets(true);
-        }, 5 * 60 * 1000);
+        }, 10 * 60 * 1000);
+      } else {
+        // Unexpected error
+        const errorText = await response.text();
+        console.error("Error starting sync:", errorText);
+        setIsSyncing(false);
       }
     } catch (error) {
       console.error("Error triggering sync:", error);
+      cleanup();
       setIsSyncing(false);
     }
   };

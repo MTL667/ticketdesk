@@ -43,15 +43,73 @@ export interface ClickUpComment {
   };
 }
 
+// Helper function to fetch with retry and timeout
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return response;
+      }
+      
+      // If rate limited (429), wait and retry
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('retry-after') || '5');
+        console.log(`Rate limited, waiting ${retryAfter}s before retry ${attempt}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        continue;
+      }
+      
+      // For server errors (5xx), retry with backoff
+      if (response.status >= 500) {
+        const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`Server error ${response.status}, waiting ${waitTime}ms before retry ${attempt}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // For other errors, return the response
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+      if ((error as Error).name === 'AbortError') {
+        console.log(`Request timeout, attempt ${attempt}/${maxRetries}`);
+      } else {
+        console.log(`Fetch error: ${(error as Error).message}, attempt ${attempt}/${maxRetries}`);
+      }
+      
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  throw lastError || new Error('Failed after max retries');
+}
+
 async function fetchAllTasksFromList(listId: string): Promise<ClickUpTask[]> {
   const allTasks: ClickUpTask[] = [];
   let page = 0;
   let hasMore = true;
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 3;
 
   while (hasMore) {
     try {
-      const response = await fetch(
-        `${CLICKUP_API_BASE}/list/${listId}/task?archived=false&page=${page}`,
+      const response = await fetchWithRetry(
+        `${CLICKUP_API_BASE}/list/${listId}/task?archived=false&page=${page}&subtasks=false&include_closed=true`,
         {
           headers: {
             "Authorization": CLICKUP_API_TOKEN!,
@@ -62,9 +120,15 @@ async function fetchAllTasksFromList(listId: string): Promise<ClickUpTask[]> {
       if (!response.ok) {
         const error = await response.text();
         console.error(`Error fetching tasks from list ${listId} (page ${page}):`, error);
-        break;
+        consecutiveErrors++;
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          console.error(`Too many consecutive errors for list ${listId}, stopping`);
+          break;
+        }
+        continue;
       }
 
+      consecutiveErrors = 0; // Reset on success
       const data = await response.json();
       const tasks = data.tasks || [];
       
@@ -80,10 +144,17 @@ async function fetchAllTasksFromList(listId: string): Promise<ClickUpTask[]> {
         if (tasks.length < 100) {
           hasMore = false;
         }
+        
+        // Small delay between pages to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error(`Exception fetching tasks from list ${listId} (page ${page}):`, error);
-      hasMore = false;
+      consecutiveErrors++;
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        console.error(`Too many consecutive errors for list ${listId}, stopping with ${allTasks.length} tasks`);
+        break;
+      }
     }
   }
 
