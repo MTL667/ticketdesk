@@ -37,26 +37,6 @@ function formatDate(dateString: string | null | undefined, language: string): st
   }
 }
 
-function getStatusStyle(status: string): { bg: string; text: string; label: string } {
-  const statusLower = status.toLowerCase();
-  if (statusLower.includes("done") || statusLower.includes("complete") || statusLower.includes("closed")) {
-    return { bg: "bg-green-500", text: "text-white", label: status };
-  }
-  if (statusLower.includes("cancel")) {
-    return { bg: "bg-gray-500", text: "text-white", label: status };
-  }
-  if (statusLower.includes("progress") || statusLower.includes("doing") || statusLower.includes("development")) {
-    return { bg: "bg-purple-500", text: "text-white", label: status };
-  }
-  if (statusLower.includes("waiting") || statusLower.includes("pending") || statusLower.includes("review") || statusLower.includes("feedback")) {
-    return { bg: "bg-yellow-500", text: "text-white", label: status };
-  }
-  if (statusLower.includes("new") || statusLower.includes("open") || statusLower.includes("to do")) {
-    return { bg: "bg-blue-500", text: "text-white", label: status };
-  }
-  return { bg: "bg-gray-500", text: "text-white", label: status };
-}
-
 export function ReleaseList({ releases }: ReleaseListProps) {
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
@@ -284,8 +264,6 @@ export function ReleaseList({ releases }: ReleaseListProps) {
         <>
           <div className="space-y-2">
             {paginatedReleases.map((release) => {
-              const statusStyle = getStatusStyle(release.status);
-              
               return (
                 <Link
                   key={release.id}
@@ -314,19 +292,16 @@ export function ReleaseList({ releases }: ReleaseListProps) {
                             🏢 {release.businessUnit}
                           </span>
                         )}
-                        {release.app && (
-                          <span className="text-green-600">
-                            📱 {release.app}
-                          </span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Status */}
+                    {/* App */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`px-3 py-1 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
-                        {statusStyle.label}
-                      </span>
+                      {release.app && (
+                        <span className="px-3 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+                          {release.app}
+                        </span>
+                      )}
                       <span className="text-gray-400 text-sm">›</span>
                     </div>
                   </div>
