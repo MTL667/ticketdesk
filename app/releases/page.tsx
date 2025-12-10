@@ -103,6 +103,15 @@ export default function ReleasesPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm inline-flex items-center gap-1"
+          >
+            ← {language === "nl" ? "Terug" : language === "fr" ? "Retour" : "Back"}
+          </Link>
+        </div>
+
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
