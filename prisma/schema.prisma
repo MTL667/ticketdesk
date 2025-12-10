@@ -63,3 +63,12 @@ model SyncLog {
   @@index([startedAt])
 }
 
+// App settings (banner, etc.)
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String?  @db.Text
+  updatedAt DateTime @updatedAt
+  updatedBy String?  // Email of admin who last updated
+}
+

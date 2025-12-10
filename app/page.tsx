@@ -11,12 +11,42 @@ export default function Home() {
   const { data: session, status } = useSession();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (status !== "loading") {
       setIsLoading(false);
     }
+    if (status === "authenticated") {
+      fetchBanner();
+      checkAdmin();
+    }
   }, [status]);
+
+  const fetchBanner = async () => {
+    try {
+      const response = await fetch("/api/settings/banner");
+      if (response.ok) {
+        const data = await response.json();
+        setBanner(data.banner);
+      }
+    } catch (error) {
+      console.error("Error fetching banner:", error);
+    }
+  };
+
+  const checkAdmin = async () => {
+    try {
+      const response = await fetch("/api/admin/check");
+      if (response.ok) {
+        const data = await response.json();
+        setIsAdmin(data.isAdmin);
+      }
+    } catch (error) {
+      console.error("Error checking admin:", error);
+    }
+  };
 
   if (status === "loading" || isLoading) {
     return (
@@ -43,6 +73,14 @@ export default function Home() {
               {t("servicedesk")}
             </h1>
             <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-medium hover:bg-red-200"
+                >
+                  Admin
+                </Link>
+              )}
               <LanguageSelector />
               <span className="text-sm text-gray-600">{session.user?.email}</span>
               <Link
@@ -57,6 +95,14 @@ export default function Home() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Banner */}
+        {banner && (
+          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg px-6 py-4 text-blue-800 flex items-start gap-3">
+            <span className="text-xl flex-shrink-0">📢</span>
+            <p className="text-sm">{banner}</p>
+          </div>
+        )}
+
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
             {t("welcome")}
