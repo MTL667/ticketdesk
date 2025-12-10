@@ -37,20 +37,6 @@ function formatDate(dateString: string | null | undefined, language: string): st
   }
 }
 
-function getStatusCategory(status: string): "done" | "active" | "waiting" | "cancelled" {
-  const statusLower = status.toLowerCase();
-  if (statusLower.includes("done") || statusLower.includes("complete") || statusLower.includes("closed")) {
-    return "done";
-  }
-  if (statusLower.includes("cancel")) {
-    return "cancelled";
-  }
-  if (statusLower.includes("waiting") || statusLower.includes("pending") || statusLower.includes("review") || statusLower.includes("feedback")) {
-    return "waiting";
-  }
-  return "active";
-}
-
 function getStatusStyle(status: string): { bg: string; text: string; label: string } {
   const statusLower = status.toLowerCase();
   if (statusLower.includes("done") || statusLower.includes("complete") || statusLower.includes("closed")) {
@@ -92,27 +78,11 @@ export function ReleaseList({ releases }: ReleaseListProps) {
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [hideDone, setHideDone] = useState(false);
-  const [hideCancelled, setHideCancelled] = useState(true);
   const ITEMS_PER_PAGE = 15;
 
-  // Get unique statuses from releases
-  const uniqueStatuses = useMemo(() => {
-    const statuses = new Map<string, number>();
-    releases.forEach(release => {
-      const status = release.status;
-      statuses.set(status, (statuses.get(status) || 0) + 1);
-    });
-    return Array.from(statuses.entries()).sort((a, b) => b[1] - a[1]);
-  }, [releases]);
-
-  // Filter releases
+  // Filter releases by search only
   const filteredReleases = useMemo(() => {
     return releases.filter((release) => {
-      const category = getStatusCategory(release.status);
-      if (hideDone && category === "done") return false;
-      if (hideCancelled && category === "cancelled") return false;
-
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         return (
@@ -122,10 +92,9 @@ export function ReleaseList({ releases }: ReleaseListProps) {
           release.status.toLowerCase().includes(query)
         );
       }
-
       return true;
     });
-  }, [releases, searchQuery, hideDone, hideCancelled]);
+  }, [releases, searchQuery]);
 
   // Paginate
   const totalPages = Math.ceil(filteredReleases.length / ITEMS_PER_PAGE);
@@ -169,59 +138,9 @@ export function ReleaseList({ releases }: ReleaseListProps) {
         </div>
       </div>
 
-      {/* Status Filters */}
-      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-gray-600 mr-1">
-            {language === "nl" ? "Filter:" : language === "fr" ? "Filtrer:" : "Filter:"}
-          </span>
-          
-          <button
-            onClick={() => { setHideDone(!hideDone); setCurrentPage(1); }}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-              hideDone 
-                ? "bg-green-100 text-green-700 hover:bg-green-200" 
-                : "bg-green-500 text-white hover:bg-green-600"
-            }`}
-          >
-            {hideDone ? "◯" : "✓"} Done/Closed
-          </button>
-          
-          <button
-            onClick={() => { setHideCancelled(!hideCancelled); setCurrentPage(1); }}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-              hideCancelled 
-                ? "bg-gray-200 text-gray-600 hover:bg-gray-300" 
-                : "bg-gray-500 text-white hover:bg-gray-600"
-            }`}
-          >
-            {hideCancelled ? "◯" : "✓"} Cancelled
-          </button>
-
-          <span className="text-gray-300 mx-1">|</span>
-
-          {uniqueStatuses.slice(0, 6).map(([status, count]) => {
-            const statusStyle = getStatusStyle(status);
-            return (
-              <span
-                key={status}
-                className={`px-2 py-0.5 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.text} opacity-75`}
-              >
-                {status} ({count})
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Results count */}
       <p className="mb-3 text-xs text-gray-500">
         {filteredReleases.length} {language === "nl" ? "van" : language === "fr" ? "sur" : "of"} {releases.length} releases
-        {(hideDone || hideCancelled) && (
-          <span className="text-blue-600 ml-1">
-            ({language === "nl" ? "gefilterd" : language === "fr" ? "filtré" : "filtered"})
-          </span>
-        )}
       </p>
 
       {/* Release List */}
