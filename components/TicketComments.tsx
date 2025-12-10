@@ -29,6 +29,8 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const prevCommentsCountRef = useRef<number>(0);
+  const isInitialLoadRef = useRef<boolean>(true);
 
   // Fetch comments
   const fetchComments = async () => {
@@ -130,9 +132,21 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
     return () => clearInterval(interval);
   }, [ticketId]);
 
-  // Scroll to bottom when comments change
+  // Only scroll to bottom when NEW comments are added (not on every refresh)
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Skip scroll on initial load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      prevCommentsCountRef.current = comments.length;
+      return;
+    }
+    
+    // Only scroll if there are more comments than before
+    if (comments.length > prevCommentsCountRef.current) {
+      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    
+    prevCommentsCountRef.current = comments.length;
   }, [comments]);
 
   return (
