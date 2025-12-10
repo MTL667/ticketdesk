@@ -19,6 +19,7 @@ interface TicketDetail {
   dateCreated: string;
   dateUpdated: string;
   businessUnit?: string;
+  app?: string;
   jiraStatus?: string;
   jiraAssignee?: string;
   jiraUrl?: string;
@@ -321,6 +322,13 @@ export default function TicketDetailPage() {
                   <div>
                     <dt className="text-sm font-medium text-gray-500">{t("businessUnit")}</dt>
                     <dd className="mt-1 text-gray-900">{ticket.businessUnit}</dd>
+                  </div>
+                )}
+
+                {ticket.app && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">App</dt>
+                    <dd className="mt-1 text-gray-900">{ticket.app}</dd>
                   </div>
                 )}
 

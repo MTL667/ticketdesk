@@ -40,6 +40,7 @@ export async function GET(
       dateCreated: release.clickupCreatedAt.getTime().toString(),
       dateUpdated: release.clickupUpdatedAt.getTime().toString(),
       businessUnit: release.businessUnit,
+      app: release.app,
       jiraStatus: release.jiraStatus,
       jiraAssignee: release.jiraAssignee,
       jiraUrl: release.jiraUrl,
@@ -54,4 +55,6 @@ export async function GET(
     );
   }
 }
+
+
 

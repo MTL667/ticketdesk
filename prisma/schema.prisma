@@ -24,6 +24,7 @@ model Ticket {
   
   // Additional fields
   businessUnit    String?
+  app             String?   // Custom field: App/Application
   jiraStatus      String?
   jiraAssignee    String?
   jiraUrl         String?

@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       dateCreated: ticket.clickupCreatedAt.getTime().toString(),
       dateUpdated: ticket.clickupUpdatedAt.getTime().toString(),
       businessUnit: ticket.businessUnit,
+      app: ticket.app,
       jiraStatus: ticket.jiraStatus,
       jiraAssignee: ticket.jiraAssignee,
       jiraUrl: ticket.jiraUrl,
@@ -51,4 +52,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+
 

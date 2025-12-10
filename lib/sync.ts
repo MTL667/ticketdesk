@@ -8,6 +8,7 @@ const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 const TICKET_ID_FIELD_ID = "faadba80-e7bc-474e-b01c-1a1c965c9a76";
 const EMAIL_FIELD_ID = "e041d530-cb4e-4fd1-9759-9cb3f9a9cbe4";
 const RELEASE_NOTES_FIELD_ID = "060ed832-9a39-4143-8c9b-571b346eba15";
+const APP_FIELD_ID = "968d6832-6156-4944-890c-c6414a0ded6d";
 
 // Helper to safely convert any value to string or null
 function toStringOrNull(value: unknown): string | null {
@@ -115,6 +116,7 @@ function taskToTicket(task: any) {
     priority: task.priority?.priority || "normal",
     userEmail: email || "unknown@unknown.com",
     businessUnit: getCustomFieldByName(task.custom_fields, "business unit"),
+    app: getCustomFieldById(task.custom_fields, APP_FIELD_ID),
     jiraStatus: getCustomFieldByName(task.custom_fields, "jira status"),
     jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee"),
     jiraUrl: getCustomFieldByName(task.custom_fields, "jira url") || 

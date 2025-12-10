@@ -19,6 +19,7 @@ interface Release {
   dateCreated: string;
   dateUpdated: string;
   businessUnit?: string;
+  app?: string;
   jiraStatus?: string;
 }
 
@@ -135,4 +136,6 @@ export default function ReleasesPage() {
     </div>
   );
 }
+
+
 

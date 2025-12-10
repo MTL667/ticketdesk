@@ -19,6 +19,7 @@ interface ReleaseDetail {
   dateCreated: string;
   dateUpdated: string;
   businessUnit?: string;
+  app?: string;
   jiraStatus?: string;
   jiraAssignee?: string;
   jiraUrl?: string;
@@ -195,21 +196,13 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ id: st
               {release.dueDate && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">
-                    {language === "nl" ? "Deadline" : language === "fr" ? "Date limite" : "Due Date"}
+                    {language === "nl" ? "Release date" : language === "fr" ? "Date de release" : "Release Date"}
                   </p>
                   <p className="text-sm font-medium text-orange-600 mt-1">
                     📅 {formatDate(release.dueDate, language)}
                   </p>
                 </div>
               )}
-              <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">
-                  {language === "nl" ? "Aangemaakt" : language === "fr" ? "Créé" : "Created"}
-                </p>
-                <p className="text-sm font-medium text-gray-900 mt-1">
-                  {formatDate(release.dateCreated, language)}
-                </p>
-              </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">
                   {language === "nl" ? "Prioriteit" : language === "fr" ? "Priorité" : "Priority"}
@@ -222,6 +215,12 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ id: st
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Business Unit</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">{release.businessUnit}</p>
+                </div>
+              )}
+              {release.app && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">App</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{release.app}</p>
                 </div>
               )}
             </div>
@@ -284,4 +283,6 @@ export default function ReleaseDetailPage({ params }: { params: Promise<{ id: st
     </div>
   );
 }
+
+
 

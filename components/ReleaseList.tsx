@@ -15,6 +15,7 @@ interface Release {
   dateCreated: string;
   dateUpdated: string;
   businessUnit?: string;
+  app?: string;
   jiraStatus?: string;
 }
 
@@ -274,7 +275,16 @@ export function ReleaseList({ releases }: ReleaseListProps) {
                             📅 {formatDate(release.dueDate, language)}
                           </span>
                         )}
-                        <span>{formatDate(release.dateCreated, language)}</span>
+                        {release.businessUnit && (
+                          <span className="text-blue-600">
+                            🏢 {release.businessUnit}
+                          </span>
+                        )}
+                        {release.app && (
+                          <span className="text-green-600">
+                            📱 {release.app}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -320,4 +330,6 @@ export function ReleaseList({ releases }: ReleaseListProps) {
     </>
   );
 }
+
+
 
