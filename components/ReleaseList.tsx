@@ -61,11 +61,71 @@ export function ReleaseList({ releases }: ReleaseListProps) {
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>("");
+  const [selectedApp, setSelectedApp] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const ITEMS_PER_PAGE = 15;
 
-  // Filter releases by search only
+  // Get unique business units
+  const businessUnits = useMemo(() => {
+    const units = new Set<string>();
+    releases.forEach(r => {
+      if (r.businessUnit) units.add(r.businessUnit);
+    });
+    return Array.from(units).sort();
+  }, [releases]);
+
+  // Get unique apps
+  const apps = useMemo(() => {
+    const appSet = new Set<string>();
+    releases.forEach(r => {
+      if (r.app) appSet.add(r.app);
+    });
+    return Array.from(appSet).sort();
+  }, [releases]);
+
+  // Get unique months from due dates
+  const months = useMemo(() => {
+    const monthSet = new Map<string, string>();
+    releases.forEach(r => {
+      if (r.dueDate) {
+        const date = new Date(parseInt(r.dueDate));
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = new Intl.DateTimeFormat(language === 'nl' ? 'nl-BE' : language === 'fr' ? 'fr-BE' : 'en-US', {
+          month: 'long',
+          year: 'numeric',
+        }).format(date);
+        monthSet.set(key, label);
+      }
+    });
+    return Array.from(monthSet.entries()).sort((a, b) => b[0].localeCompare(a[0])); // newest first
+  }, [releases, language]);
+
+  // Filter releases
   const filteredReleases = useMemo(() => {
     return releases.filter((release) => {
+      // Business Unit filter
+      if (selectedBusinessUnit && release.businessUnit !== selectedBusinessUnit) {
+        return false;
+      }
+      
+      // App filter
+      if (selectedApp && release.app !== selectedApp) {
+        return false;
+      }
+      
+      // Month filter
+      if (selectedMonth && release.dueDate) {
+        const date = new Date(parseInt(release.dueDate));
+        const releaseMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (releaseMonth !== selectedMonth) {
+          return false;
+        }
+      } else if (selectedMonth && !release.dueDate) {
+        return false;
+      }
+
+      // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         return (
@@ -77,7 +137,16 @@ export function ReleaseList({ releases }: ReleaseListProps) {
       }
       return true;
     });
-  }, [releases, searchQuery]);
+  }, [releases, searchQuery, selectedBusinessUnit, selectedApp, selectedMonth]);
+
+  const hasActiveFilters = selectedBusinessUnit || selectedApp || selectedMonth;
+
+  const clearFilters = () => {
+    setSelectedBusinessUnit("");
+    setSelectedApp("");
+    setSelectedMonth("");
+    setCurrentPage(1);
+  };
 
   // Paginate
   const totalPages = Math.ceil(filteredReleases.length / ITEMS_PER_PAGE);
@@ -88,6 +157,11 @@ export function ReleaseList({ releases }: ReleaseListProps) {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (setter: (value: string) => void) => (value: string) => {
+    setter(value);
     setCurrentPage(1);
   };
 
@@ -121,9 +195,75 @@ export function ReleaseList({ releases }: ReleaseListProps) {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-gray-600">
+            {language === "nl" ? "Filter:" : language === "fr" ? "Filtrer:" : "Filter:"}
+          </span>
+          
+          {/* Business Unit Filter */}
+          <select
+            value={selectedBusinessUnit}
+            onChange={(e) => handleFilterChange(setSelectedBusinessUnit)(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">
+              🏢 {language === "nl" ? "Alle Business Units" : language === "fr" ? "Toutes les BU" : "All Business Units"}
+            </option>
+            {businessUnits.map(bu => (
+              <option key={bu} value={bu}>{bu}</option>
+            ))}
+          </select>
+
+          {/* App Filter */}
+          <select
+            value={selectedApp}
+            onChange={(e) => handleFilterChange(setSelectedApp)(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">
+              📱 {language === "nl" ? "Alle Apps" : language === "fr" ? "Toutes les apps" : "All Apps"}
+            </option>
+            {apps.map(app => (
+              <option key={app} value={app}>{app}</option>
+            ))}
+          </select>
+
+          {/* Month Filter */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => handleFilterChange(setSelectedMonth)(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">
+              📅 {language === "nl" ? "Alle maanden" : language === "fr" ? "Tous les mois" : "All months"}
+            </option>
+            {months.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+            >
+              ✕ {language === "nl" ? "Wis filters" : language === "fr" ? "Effacer" : "Clear"}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Results count */}
       <p className="mb-3 text-xs text-gray-500">
         {filteredReleases.length} {language === "nl" ? "van" : language === "fr" ? "sur" : "of"} {releases.length} releases
+        {hasActiveFilters && (
+          <span className="text-blue-600 ml-1">
+            ({language === "nl" ? "gefilterd" : language === "fr" ? "filtré" : "filtered"})
+          </span>
+        )}
       </p>
 
       {/* Release List */}
