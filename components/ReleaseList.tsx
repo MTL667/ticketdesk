@@ -57,23 +57,6 @@ function getStatusStyle(status: string): { bg: string; text: string; label: stri
   return { bg: "bg-gray-500", text: "text-white", label: status };
 }
 
-function getPriorityStyle(priority: string): { bg: string; text: string } {
-  const priorityLower = (priority || "normal").toLowerCase();
-  if (priorityLower === "urgent") {
-    return { bg: "bg-red-100", text: "text-red-700" };
-  }
-  if (priorityLower === "high") {
-    return { bg: "bg-orange-100", text: "text-orange-700" };
-  }
-  if (priorityLower === "normal") {
-    return { bg: "bg-blue-100", text: "text-blue-700" };
-  }
-  if (priorityLower === "low") {
-    return { bg: "bg-gray-100", text: "text-gray-700" };
-  }
-  return { bg: "bg-gray-100", text: "text-gray-700" };
-}
-
 export function ReleaseList({ releases }: ReleaseListProps) {
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
@@ -162,7 +145,6 @@ export function ReleaseList({ releases }: ReleaseListProps) {
           <div className="space-y-2">
             {paginatedReleases.map((release) => {
               const statusStyle = getStatusStyle(release.status);
-              const priorityStyle = getPriorityStyle(release.priority || "normal");
               
               return (
                 <Link
@@ -171,13 +153,6 @@ export function ReleaseList({ releases }: ReleaseListProps) {
                   className="block bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all"
                 >
                   <div className="px-4 py-3 flex items-center gap-3">
-                    {/* Priority */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityStyle.bg} ${priorityStyle.text}`}>
-                        {release.priority || "normal"}
-                      </span>
-                    </div>
-
                     {/* Title and info */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-gray-900 truncate text-sm">
