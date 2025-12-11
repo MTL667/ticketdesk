@@ -402,35 +402,62 @@ export default function AdminPage() {
             <h3 className="text-sm font-medium text-gray-700 mb-3">
               {language === "nl" ? "Service Toevoegen" : language === "fr" ? "Ajouter un Service" : "Add Service"}
             </h3>
-            <div className="flex flex-wrap gap-3">
-              <input
-                type="text"
-                value={newServiceName}
-                onChange={(e) => setNewServiceName(e.target.value)}
-                placeholder={language === "nl" ? "Service naam (bijv. Forms)" : "Service name (e.g., Forms)"}
-                className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="space-y-3">
+              {/* Step 1: Select Zabbix Host */}
               {zabbixConnected && zabbixHosts.length > 0 && (
-                <select
-                  value={selectedHostId}
-                  onChange={(e) => setSelectedHostId(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">{language === "nl" ? "-- Zabbix Host (optioneel) --" : "-- Zabbix Host (optional) --"}</option>
-                  {zabbixHosts.filter(h => h.enabled).map((host) => (
-                    <option key={host.id} value={host.id}>
-                      {host.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    1. {language === "nl" ? "Selecteer Zabbix Host" : "Select Zabbix Host"}
+                  </label>
+                  <select
+                    value={selectedHostId}
+                    onChange={(e) => {
+                      setSelectedHostId(e.target.value);
+                      // Auto-fill name with host name if empty
+                      if (e.target.value && !newServiceName) {
+                        const host = zabbixHosts.find(h => h.id === e.target.value);
+                        if (host) setNewServiceName(host.name);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{language === "nl" ? "-- Kies een host --" : "-- Select a host --"}</option>
+                    {zabbixHosts.filter(h => h.enabled).map((host) => (
+                      <option key={host.id} value={host.id}>
+                        {host.name} ({host.host})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
-              <button
-                onClick={addService}
-                disabled={isAddingService || !newServiceName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
-              >
-                {isAddingService ? "..." : language === "nl" ? "Toevoegen" : "Add"}
-              </button>
+              
+              {/* Step 2: Custom Display Name */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  {zabbixConnected ? "2. " : ""}{language === "nl" ? "Weergavenaam (zichtbaar op homepage)" : "Display name (visible on homepage)"}
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={newServiceName}
+                    onChange={(e) => setNewServiceName(e.target.value)}
+                    placeholder={language === "nl" ? "bijv. Formulieren, SAP, Email..." : "e.g., Forms, SAP, Email..."}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={addService}
+                    disabled={isAddingService || !newServiceName.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm whitespace-nowrap"
+                  >
+                    {isAddingService ? "..." : language === "nl" ? "Toevoegen" : "Add"}
+                  </button>
+                </div>
+                {selectedHostId && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    🔗 {language === "nl" ? "Gekoppeld aan Zabbix host:" : "Linked to Zabbix host:"} {zabbixHosts.find(h => h.id === selectedHostId)?.name}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
