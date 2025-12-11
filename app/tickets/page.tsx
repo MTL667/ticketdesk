@@ -57,6 +57,7 @@ export default function TicketsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchTickets = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
@@ -90,6 +91,18 @@ export default function TicketsPage() {
       }
     } catch (error) {
       console.error("Error fetching sync status:", error);
+    }
+  }, []);
+
+  const checkAdmin = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/check");
+      if (response.ok) {
+        const data = await response.json();
+        setIsAdmin(data.isAdmin);
+      }
+    } catch (error) {
+      console.error("Error checking admin:", error);
     }
   }, []);
 
@@ -181,10 +194,11 @@ export default function TicketsPage() {
     if (status === "authenticated") {
       fetchTickets();
       fetchSyncStatus();
+      checkAdmin();
     } else if (status === "unauthenticated") {
       redirect("/signin");
     }
-  }, [status, fetchTickets, fetchSyncStatus]);
+  }, [status, fetchTickets, fetchSyncStatus, checkAdmin]);
 
   if (status === "loading" || isLoading) {
     return (
@@ -278,38 +292,41 @@ export default function TicketsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {/* Sync Button - double click for force sync */}
-            <button
-              onClick={() => triggerSync(false)}
-              onDoubleClick={() => triggerSync(true)}
-              disabled={isSyncing}
-              className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-              title={language === "nl" ? "Sync (dubbelklik = force)" : language === "fr" ? "Sync (double-clic = force)" : "Sync (double-click = force)"}
-            >
-              <span className={isSyncing ? "animate-spin" : ""}>⚡</span>
-              {isSyncing ? (
-                <>
-                  {language === "nl" && "Syncing..."}
-                  {language === "fr" && "Syncing..."}
-                  {language === "en" && "Syncing..."}
-                </>
-              ) : (
-                <>
-                  {language === "nl" && "Sync"}
-                  {language === "fr" && "Sync"}
-                  {language === "en" && "Sync"}
-                </>
-              )}
-            </button>
-            {/* Refresh Button */}
-            <button
-              onClick={() => fetchTickets(true)}
-              disabled={isRefreshing}
-              className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-              title={language === "nl" ? "Ververs lijst" : language === "fr" ? "Actualiser la liste" : "Refresh list"}
-            >
-              <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
-            </button>
+            {/* Sync Buttons - Admin only */}
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => triggerSync(false)}
+                  onDoubleClick={() => triggerSync(true)}
+                  disabled={isSyncing}
+                  className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                  title={language === "nl" ? "Sync (dubbelklik = force)" : language === "fr" ? "Sync (double-clic = force)" : "Sync (double-click = force)"}
+                >
+                  <span className={isSyncing ? "animate-spin" : ""}>⚡</span>
+                  {isSyncing ? (
+                    <>
+                      {language === "nl" && "Syncing..."}
+                      {language === "fr" && "Syncing..."}
+                      {language === "en" && "Syncing..."}
+                    </>
+                  ) : (
+                    <>
+                      {language === "nl" && "Sync"}
+                      {language === "fr" && "Sync"}
+                      {language === "en" && "Sync"}
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => fetchTickets(true)}
+                  disabled={isRefreshing}
+                  className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                  title={language === "nl" ? "Ververs lijst" : language === "fr" ? "Actualiser la liste" : "Refresh list"}
+                >
+                  <span className={isRefreshing ? "animate-spin" : ""}>🔄</span>
+                </button>
+              </>
+            )}
             <Link
               href="/tickets/new"
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
@@ -319,8 +336,8 @@ export default function TicketsPage() {
           </div>
         </div>
 
-        {/* Sync Status Banner */}
-        {isSyncing && (
+        {/* Sync Status Banner - Admin only */}
+        {isAdmin && isSyncing && (
           <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
             <div className="animate-spin text-blue-600">⚡</div>
             <div className="text-sm text-blue-700">
