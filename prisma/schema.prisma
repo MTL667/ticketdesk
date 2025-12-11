@@ -72,3 +72,20 @@ model Setting {
   updatedBy String?  // Email of admin who last updated
 }
 
+// Monitored services for system status
+model MonitoredService {
+  id            String   @id @default(cuid())
+  name          String   // Display name (e.g., "Forms", "SAP Integration")
+  zabbixHostId  String?  // Zabbix host ID
+  zabbixHostName String? // Zabbix host name for display
+  manualStatus  String?  // Manual override: "ok", "warning", "critical", "down"
+  manualMessage String?  // Manual status message
+  displayOrder  Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([displayOrder])
+}
+

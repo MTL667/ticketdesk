@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { SystemStatus } from "@/components/SystemStatus";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -102,6 +103,9 @@ export default function Home() {
             <p className="text-sm">{banner}</p>
           </div>
         )}
+
+        {/* System Status */}
+        <SystemStatus />
 
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">

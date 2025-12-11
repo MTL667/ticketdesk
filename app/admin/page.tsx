@@ -7,22 +7,57 @@ import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
+interface ZabbixHost {
+  id: string;
+  name: string;
+  host: string;
+  enabled: boolean;
+}
+
+interface MonitoredService {
+  id: string;
+  name: string;
+  zabbixHostId: string | null;
+  zabbixHostName: string | null;
+  manualStatus: string | null;
+  manualMessage: string | null;
+  displayOrder: number;
+  isActive: boolean;
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const { language } = useLanguage();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Banner state
   const [bannerMessage, setBannerMessage] = useState("");
   const [currentBanner, setCurrentBanner] = useState<string | null>(null);
   const [bannerUpdatedAt, setBannerUpdatedAt] = useState<string | null>(null);
   const [bannerUpdatedBy, setBannerUpdatedBy] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Zabbix state
+  const [zabbixConfigured, setZabbixConfigured] = useState(false);
+  const [zabbixConnected, setZabbixConnected] = useState(false);
+  const [zabbixVersion, setZabbixVersion] = useState<string | null>(null);
+  const [zabbixHosts, setZabbixHosts] = useState<ZabbixHost[]>([]);
+  const [zabbixError, setZabbixError] = useState<string | null>(null);
+  
+  // Services state
+  const [services, setServices] = useState<MonitoredService[]>([]);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [selectedHostId, setSelectedHostId] = useState("");
+  const [isAddingService, setIsAddingService] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
       checkAdmin();
       fetchBanner();
+      fetchZabbixInfo();
+      fetchServices();
     } else if (status === "unauthenticated") {
       redirect("/signin");
     }
@@ -56,6 +91,89 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error("Error fetching banner:", error);
+    }
+  };
+
+  const fetchZabbixInfo = async () => {
+    try {
+      const response = await fetch("/api/admin/zabbix");
+      if (response.ok) {
+        const data = await response.json();
+        setZabbixConfigured(data.configured || false);
+        setZabbixConnected(data.connected || false);
+        setZabbixVersion(data.version || null);
+        setZabbixHosts(data.hosts || []);
+        setZabbixError(data.message && !data.connected ? data.message : null);
+      }
+    } catch (error) {
+      console.error("Error fetching Zabbix info:", error);
+      setZabbixError("Error connecting to Zabbix");
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const response = await fetch("/api/admin/services");
+      if (response.ok) {
+        const data = await response.json();
+        setServices(data.services || []);
+      }
+    } catch (error) {
+      console.error("Error fetching services:", error);
+    }
+  };
+
+  const addService = async () => {
+    if (!newServiceName.trim()) return;
+    
+    setIsAddingService(true);
+    try {
+      const selectedHost = zabbixHosts.find(h => h.id === selectedHostId);
+      const response = await fetch("/api/admin/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newServiceName.trim(),
+          zabbixHostId: selectedHostId || null,
+          zabbixHostName: selectedHost?.name || null,
+        }),
+      });
+      
+      if (response.ok) {
+        setNewServiceName("");
+        setSelectedHostId("");
+        fetchServices();
+      }
+    } catch (error) {
+      console.error("Error adding service:", error);
+    } finally {
+      setIsAddingService(false);
+    }
+  };
+
+  const updateServiceStatus = async (serviceId: string, manualStatus: string | null, manualMessage: string | null) => {
+    try {
+      await fetch(`/api/admin/services/${serviceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manualStatus, manualMessage }),
+      });
+      fetchServices();
+    } catch (error) {
+      console.error("Error updating service:", error);
+    }
+  };
+
+  const deleteService = async (serviceId: string) => {
+    if (!confirm(language === "nl" ? "Weet je zeker dat je deze service wilt verwijderen?" : "Are you sure you want to delete this service?")) {
+      return;
+    }
+    
+    try {
+      await fetch(`/api/admin/services/${serviceId}`, { method: "DELETE" });
+      fetchServices();
+    } catch (error) {
+      console.error("Error deleting service:", error);
     }
   };
 
@@ -241,6 +359,148 @@ export default function AdminPage() {
                 </span>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* System Status Management */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            📊 {language === "nl" ? "Systeem Status" : language === "fr" ? "État du Système" : "System Status"}
+          </h2>
+
+          {/* Zabbix Connection Status */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Zabbix {language === "nl" ? "Verbinding" : language === "fr" ? "Connexion" : "Connection"}
+            </h3>
+            {!zabbixConfigured ? (
+              <div className="text-sm text-gray-500">
+                <p className="mb-2">⚠️ {language === "nl" ? "Niet geconfigureerd" : "Not configured"}</p>
+                <p className="text-xs">
+                  {language === "nl" 
+                    ? "Stel ZABBIX_URL en ZABBIX_API_TOKEN in als environment variabelen."
+                    : "Set ZABBIX_URL and ZABBIX_API_TOKEN as environment variables."}
+                </p>
+              </div>
+            ) : zabbixConnected ? (
+              <div className="text-sm text-green-600">
+                ✓ {language === "nl" ? "Verbonden" : "Connected"} {zabbixVersion && `(v${zabbixVersion})`}
+                <span className="text-gray-500 ml-2">
+                  - {zabbixHosts.length} hosts {language === "nl" ? "gevonden" : "found"}
+                </span>
+              </div>
+            ) : (
+              <div className="text-sm text-red-600">
+                ✗ {language === "nl" ? "Verbinding mislukt" : "Connection failed"}
+                {zabbixError && <p className="text-xs mt-1">{zabbixError}</p>}
+              </div>
+            )}
+          </div>
+
+          {/* Add New Service */}
+          <div className="mb-6 p-4 border border-gray-200 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
+              {language === "nl" ? "Service Toevoegen" : language === "fr" ? "Ajouter un Service" : "Add Service"}
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              <input
+                type="text"
+                value={newServiceName}
+                onChange={(e) => setNewServiceName(e.target.value)}
+                placeholder={language === "nl" ? "Service naam (bijv. Forms)" : "Service name (e.g., Forms)"}
+                className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {zabbixConnected && zabbixHosts.length > 0 && (
+                <select
+                  value={selectedHostId}
+                  onChange={(e) => setSelectedHostId(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{language === "nl" ? "-- Zabbix Host (optioneel) --" : "-- Zabbix Host (optional) --"}</option>
+                  {zabbixHosts.filter(h => h.enabled).map((host) => (
+                    <option key={host.id} value={host.id}>
+                      {host.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={addService}
+                disabled={isAddingService || !newServiceName.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+              >
+                {isAddingService ? "..." : language === "nl" ? "Toevoegen" : "Add"}
+              </button>
+            </div>
+          </div>
+
+          {/* Services List */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">
+              {language === "nl" ? "Gemonitorde Services" : language === "fr" ? "Services Surveillés" : "Monitored Services"}
+              {services.length > 0 && <span className="text-gray-400 font-normal"> ({services.length})</span>}
+            </h3>
+            
+            {services.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">
+                {language === "nl" ? "Nog geen services toegevoegd" : "No services added yet"}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {services.map((service) => (
+                  <div
+                    key={service.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{service.name}</span>
+                        {service.zabbixHostName && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                            Zabbix: {service.zabbixHostName}
+                          </span>
+                        )}
+                        {service.manualStatus && (
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            service.manualStatus === "ok" ? "bg-green-100 text-green-700" :
+                            service.manualStatus === "warning" ? "bg-yellow-100 text-yellow-700" :
+                            service.manualStatus === "critical" ? "bg-orange-100 text-orange-700" :
+                            service.manualStatus === "down" ? "bg-red-100 text-red-700" :
+                            "bg-gray-100 text-gray-700"
+                          }`}>
+                            {language === "nl" ? "Handmatig:" : "Manual:"} {service.manualStatus}
+                          </span>
+                        )}
+                      </div>
+                      {service.manualMessage && (
+                        <p className="text-xs text-gray-500 mt-1">{service.manualMessage}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* Manual Status Override */}
+                      <select
+                        value={service.manualStatus || ""}
+                        onChange={(e) => updateServiceStatus(service.id, e.target.value || null, service.manualMessage)}
+                        className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">{language === "nl" ? "Auto (Zabbix)" : "Auto (Zabbix)"}</option>
+                        <option value="ok">🟢 OK</option>
+                        <option value="warning">🟡 Warning</option>
+                        <option value="critical">🟠 Critical</option>
+                        <option value="down">🔴 Down</option>
+                      </select>
+                      <button
+                        onClick={() => deleteService(service.id)}
+                        className="text-red-600 hover:text-red-800 text-sm px-2"
+                        title={language === "nl" ? "Verwijderen" : "Delete"}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
