@@ -66,31 +66,70 @@ export function getZabbixConfig(): ZabbixConfig | null {
   return { url: apiUrl, token };
 }
 
-// Make Zabbix API request
+// Make Zabbix API request - tries Bearer token first, then auth param in body
 async function zabbixRequest(
   config: ZabbixConfig,
   method: string,
-  params: Record<string, unknown> = {}
+  params: Record<string, unknown> = {},
+  skipAuth = false
 ): Promise<unknown> {
-  const response = await fetch(config.url, {
+  // First try with Bearer token (Zabbix 5.4+)
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  if (!skipAuth) {
+    headers["Authorization"] = `Bearer ${config.token}`;
+  }
+
+  const body: Record<string, unknown> = {
+    jsonrpc: "2.0",
+    method,
+    params,
+    id: 1,
+  };
+
+  let response = await fetch(config.url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.token}`,
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method,
-      params,
-      id: 1,
-    }),
+    headers,
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     throw new Error(`Zabbix API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  let data = await response.json();
+
+  // If Bearer token fails with auth error, try with auth param in body (older Zabbix)
+  if (data.error && !skipAuth) {
+    const errorMsg = data.error.message || data.error.data || "";
+    if (errorMsg.toLowerCase().includes("auth") || 
+        errorMsg.toLowerCase().includes("permission") ||
+        errorMsg.toLowerCase().includes("invalid params")) {
+      
+      // Try with auth in body instead
+      const bodyWithAuth = {
+        jsonrpc: "2.0",
+        method,
+        params,
+        auth: config.token,
+        id: 1,
+      };
+
+      response = await fetch(config.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyWithAuth),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Zabbix API error: ${response.status} ${response.statusText}`);
+      }
+
+      data = await response.json();
+    }
+  }
 
   if (data.error) {
     throw new Error(`Zabbix API error: ${data.error.message || data.error.data || JSON.stringify(data.error)}`);
@@ -112,7 +151,8 @@ export async function testZabbixConnection(config?: ZabbixConfig): Promise<{
   }
 
   try {
-    const result = await zabbixRequest(cfg, "apiinfo.version", {});
+    // apiinfo.version is a public method, no auth needed
+    const result = await zabbixRequest(cfg, "apiinfo.version", {}, true);
     return {
       success: true,
       message: "Connection successful",
