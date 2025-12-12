@@ -14,11 +14,20 @@ interface ZabbixHost {
   enabled: boolean;
 }
 
+interface ZabbixWebScenario {
+  id: string;
+  name: string;
+  hostId: string;
+  enabled: boolean;
+}
+
 interface MonitoredService {
   id: string;
   name: string;
   zabbixHostId: string | null;
   zabbixHostName: string | null;
+  zabbixWebScenarioId: string | null;
+  zabbixWebScenarioName: string | null;
   manualStatus: string | null;
   manualMessage: string | null;
   displayOrder: number;
@@ -50,6 +59,9 @@ export default function AdminPage() {
   const [services, setServices] = useState<MonitoredService[]>([]);
   const [newServiceName, setNewServiceName] = useState("");
   const [selectedHostId, setSelectedHostId] = useState("");
+  const [selectedWebScenarioId, setSelectedWebScenarioId] = useState("");
+  const [webScenarios, setWebScenarios] = useState<ZabbixWebScenario[]>([]);
+  const [loadingWebScenarios, setLoadingWebScenarios] = useState(false);
   const [isAddingService, setIsAddingService] = useState(false);
 
   useEffect(() => {
@@ -123,12 +135,35 @@ export default function AdminPage() {
     }
   };
 
+  // Fetch web scenarios when host is selected
+  const fetchWebScenarios = async (hostId: string) => {
+    if (!hostId) {
+      setWebScenarios([]);
+      setSelectedWebScenarioId("");
+      return;
+    }
+    
+    setLoadingWebScenarios(true);
+    try {
+      const response = await fetch(`/api/admin/zabbix?hostId=${hostId}`);
+      const data = await response.json();
+      setWebScenarios(data.webScenarios || []);
+    } catch (error) {
+      console.error("Error fetching web scenarios:", error);
+      setWebScenarios([]);
+    } finally {
+      setLoadingWebScenarios(false);
+    }
+  };
+
   const addService = async () => {
     if (!newServiceName.trim()) return;
     
     setIsAddingService(true);
     try {
       const selectedHost = zabbixHosts.find(h => h.id === selectedHostId);
+      const selectedWebScenario = webScenarios.find(ws => ws.id === selectedWebScenarioId);
+      
       const response = await fetch("/api/admin/services", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,12 +171,16 @@ export default function AdminPage() {
           name: newServiceName.trim(),
           zabbixHostId: selectedHostId || null,
           zabbixHostName: selectedHost?.name || null,
+          zabbixWebScenarioId: selectedWebScenarioId || null,
+          zabbixWebScenarioName: selectedWebScenario?.name || null,
         }),
       });
       
       if (response.ok) {
         setNewServiceName("");
         setSelectedHostId("");
+        setSelectedWebScenarioId("");
+        setWebScenarios([]);
         fetchServices();
       }
     } catch (error) {
@@ -412,10 +451,14 @@ export default function AdminPage() {
                   <select
                     value={selectedHostId}
                     onChange={(e) => {
-                      setSelectedHostId(e.target.value);
+                      const hostId = e.target.value;
+                      setSelectedHostId(hostId);
+                      setSelectedWebScenarioId("");
+                      // Fetch web scenarios for this host
+                      fetchWebScenarios(hostId);
                       // Auto-fill name with host name if empty
-                      if (e.target.value && !newServiceName) {
-                        const host = zabbixHosts.find(h => h.id === e.target.value);
+                      if (hostId && !newServiceName) {
+                        const host = zabbixHosts.find(h => h.id === hostId);
                         if (host) setNewServiceName(host.name);
                       }
                     }}
@@ -431,10 +474,49 @@ export default function AdminPage() {
                 </div>
               )}
               
-              {/* Step 2: Custom Display Name */}
+              {/* Step 2: Select Web Scenario (optional) */}
+              {selectedHostId && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    2. {language === "nl" ? "Web Scenario (optioneel)" : "Web Scenario (optional)"}
+                  </label>
+                  {loadingWebScenarios ? (
+                    <div className="text-xs text-gray-400 py-2">
+                      {language === "nl" ? "Laden..." : "Loading..."}
+                    </div>
+                  ) : webScenarios.length > 0 ? (
+                    <select
+                      value={selectedWebScenarioId}
+                      onChange={(e) => {
+                        const wsId = e.target.value;
+                        setSelectedWebScenarioId(wsId);
+                        // Update name if a web scenario is selected
+                        if (wsId) {
+                          const ws = webScenarios.find(w => w.id === wsId);
+                          if (ws) setNewServiceName(ws.name);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">{language === "nl" ? "-- Volledige host monitoren --" : "-- Monitor entire host --"}</option>
+                      {webScenarios.filter(ws => ws.enabled).map((ws) => (
+                        <option key={ws.id} value={ws.id}>
+                          🌐 {ws.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs text-gray-400 py-2">
+                      {language === "nl" ? "Geen web scenarios gevonden voor deze host" : "No web scenarios found for this host"}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Step 3: Custom Display Name */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  {zabbixConnected ? "2. " : ""}{language === "nl" ? "Weergavenaam (zichtbaar op homepage)" : "Display name (visible on homepage)"}
+                  {zabbixConnected ? (selectedHostId ? "3. " : "2. ") : ""}{language === "nl" ? "Weergavenaam (zichtbaar op homepage)" : "Display name (visible on homepage)"}
                 </label>
                 <div className="flex gap-3">
                   <input
@@ -454,7 +536,10 @@ export default function AdminPage() {
                 </div>
                 {selectedHostId && (
                   <p className="text-xs text-gray-400 mt-1">
-                    🔗 {language === "nl" ? "Gekoppeld aan Zabbix host:" : "Linked to Zabbix host:"} {zabbixHosts.find(h => h.id === selectedHostId)?.name}
+                    🔗 {language === "nl" ? "Gekoppeld aan:" : "Linked to:"} {zabbixHosts.find(h => h.id === selectedHostId)?.name}
+                    {selectedWebScenarioId && webScenarios.find(ws => ws.id === selectedWebScenarioId) && (
+                      <span> → 🌐 {webScenarios.find(ws => ws.id === selectedWebScenarioId)?.name}</span>
+                    )}
                   </p>
                 )}
               </div>

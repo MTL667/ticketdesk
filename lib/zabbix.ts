@@ -31,6 +31,22 @@ interface ZabbixTrigger {
   hosts?: { hostid: string; name: string }[];
 }
 
+interface ZabbixHttpTest {
+  httptestid: string;
+  name: string;
+  hostid: string;
+  status: string; // 0 = enabled, 1 = disabled
+  nextcheck?: string;
+}
+
+interface ZabbixHttpTestStatus {
+  httptestid: string;
+  name: string;
+  lastfailedstep: string; // 0 = OK, >0 = step number that failed
+  lastcheck: string;
+  lastvalue?: string;
+}
+
 export interface ServiceStatus {
   hostId: string;
   hostName: string;
@@ -180,6 +196,155 @@ export async function getZabbixHosts(config?: ZabbixConfig): Promise<ZabbixHost[
   });
 
   return result as ZabbixHost[];
+}
+
+// Get web scenarios (httptests) for a specific host
+export async function getZabbixWebScenarios(
+  hostId: string,
+  config?: ZabbixConfig
+): Promise<ZabbixHttpTest[]> {
+  const cfg = config || getZabbixConfig();
+
+  if (!cfg) {
+    throw new Error("Zabbix not configured");
+  }
+
+  const result = await zabbixRequest(cfg, "httptest.get", {
+    hostids: [hostId],
+    output: ["httptestid", "name", "hostid", "status"],
+    sortfield: "name",
+  });
+
+  return result as ZabbixHttpTest[];
+}
+
+// Get all web scenarios from Zabbix (for all hosts)
+export async function getAllZabbixWebScenarios(config?: ZabbixConfig): Promise<(ZabbixHttpTest & { hostname?: string })[]> {
+  const cfg = config || getZabbixConfig();
+
+  if (!cfg) {
+    throw new Error("Zabbix not configured");
+  }
+
+  const result = await zabbixRequest(cfg, "httptest.get", {
+    output: ["httptestid", "name", "hostid", "status"],
+    selectHosts: ["name"],
+    sortfield: "name",
+  });
+
+  return (result as any[]).map(ws => ({
+    ...ws,
+    hostname: ws.hosts?.[0]?.name,
+  }));
+}
+
+// Get web scenario status
+export async function getWebScenarioStatus(
+  httptestId: string,
+  config?: ZabbixConfig
+): Promise<ServiceStatus> {
+  const cfg = config || getZabbixConfig();
+
+  if (!cfg) {
+    return {
+      hostId: httptestId,
+      hostName: "Unknown",
+      status: "unknown",
+      message: "Zabbix not configured",
+      problemCount: 0,
+      highestSeverity: 0,
+      problems: [],
+    };
+  }
+
+  try {
+    // Get httptest info with last check data
+    const httptests = await zabbixRequest(cfg, "httptest.get", {
+      httptestids: [httptestId],
+      output: ["httptestid", "name", "hostid", "status"],
+      selectHosts: ["name"],
+    }) as any[];
+
+    if (httptests.length === 0) {
+      return {
+        hostId: httptestId,
+        hostName: "Unknown",
+        status: "unknown",
+        message: "Web scenario not found",
+        problemCount: 0,
+        highestSeverity: 0,
+        problems: [],
+      };
+    }
+
+    const httptest = httptests[0];
+    const scenarioName = httptest.name;
+    const hostName = httptest.hosts?.[0]?.name || "Unknown Host";
+    const hostId = httptest.hostid;
+
+    // Check if scenario is disabled
+    if (httptest.status === "1") {
+      return {
+        hostId: httptestId,
+        hostName: scenarioName,
+        status: "unknown",
+        message: "Monitoring disabled",
+        problemCount: 0,
+        highestSeverity: 0,
+        problems: [],
+      };
+    }
+
+    // Get problems related to this web scenario by checking triggers
+    // Web scenario triggers usually contain the scenario name
+    const problems = await zabbixRequest(cfg, "problem.get", {
+      hostids: [hostId],
+      output: ["eventid", "name", "severity", "clock"],
+      search: { name: scenarioName },
+      searchWildcardsEnabled: true,
+      recent: true,
+      sortfield: "eventid",
+      sortorder: "DESC",
+    }) as ZabbixProblem[];
+
+    if (problems.length === 0) {
+      return {
+        hostId: httptestId,
+        hostName: scenarioName,
+        status: "ok",
+        message: "Operational",
+        problemCount: 0,
+        highestSeverity: 0,
+        problems: [],
+      };
+    }
+
+    const highestSeverity = Math.max(...problems.map((p) => parseInt(p.severity)));
+
+    return {
+      hostId: httptestId,
+      hostName: scenarioName,
+      status: severityToStatus(highestSeverity),
+      message: problems[0].name,
+      problemCount: problems.length,
+      highestSeverity,
+      problems: problems.map((p) => ({
+        name: p.name,
+        severity: parseInt(p.severity),
+        since: new Date(parseInt(p.clock) * 1000),
+      })),
+    };
+  } catch (error) {
+    return {
+      hostId: httptestId,
+      hostName: "Unknown",
+      status: "unknown",
+      message: error instanceof Error ? error.message : "Error fetching status",
+      problemCount: 0,
+      highestSeverity: 0,
+      problems: [],
+    };
+  }
 }
 
 // Get problems for specific hosts

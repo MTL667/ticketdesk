@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getHostStatus, getZabbixConfig } from "@/lib/zabbix";
+import { getHostStatus, getWebScenarioStatus, getZabbixConfig } from "@/lib/zabbix";
 
 export interface SystemStatusItem {
   id: string;
@@ -61,13 +61,21 @@ export async function GET() {
 
       // Fetch from Zabbix
       try {
-        const hostStatus = await getHostStatus(service.zabbixHostId);
+        let serviceStatus;
+        
+        // If web scenario is configured, check that instead of the host
+        if (service.zabbixWebScenarioId) {
+          serviceStatus = await getWebScenarioStatus(service.zabbixWebScenarioId);
+        } else {
+          serviceStatus = await getHostStatus(service.zabbixHostId);
+        }
+        
         statusItems.push({
           id: service.id,
           name: service.name,
-          status: hostStatus.status,
-          message: hostStatus.message,
-          problemCount: hostStatus.problemCount,
+          status: serviceStatus.status,
+          message: serviceStatus.message,
+          problemCount: serviceStatus.problemCount,
           isManual: false,
         });
       } catch (error) {

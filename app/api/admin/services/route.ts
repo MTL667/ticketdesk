@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, zabbixHostId, zabbixHostName, displayOrder } = body;
+    const { name, zabbixHostId, zabbixHostName, zabbixWebScenarioId, zabbixWebScenarioName, displayOrder } = body;
 
     if (!name) {
       return NextResponse.json({ message: "Name is required" }, { status: 400 });
@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
         name,
         zabbixHostId: zabbixHostId || null,
         zabbixHostName: zabbixHostName || null,
+        zabbixWebScenarioId: zabbixWebScenarioId || null,
+        zabbixWebScenarioName: zabbixWebScenarioName || null,
         displayOrder: order,
       },
     });
