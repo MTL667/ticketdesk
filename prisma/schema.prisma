@@ -42,12 +42,30 @@ model Ticket {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Attachments
+  attachments   Attachment[]
+
   // Indexes for fast queries
   @@index([userEmail])
   @@index([status])
   @@index([ticketId])
   @@index([syncedAt])
   @@index([releaseNotes])
+}
+
+// Ticket attachments from ClickUp
+model Attachment {
+  id          String   @id // ClickUp attachment ID
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  title       String
+  url         String   @db.Text
+  extension   String?  // File extension (e.g., "pdf", "png")
+  size        Int?     // File size in bytes
+  dateAdded   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([ticketId])
 }
 
 // Track sync status
