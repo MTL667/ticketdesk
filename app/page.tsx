@@ -123,12 +123,9 @@ export default function Home() {
           >
             <div className="text-center">
               <div className="text-4xl mb-4">➕</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-xl font-semibold text-gray-900">
                 {t("newTicket")}
               </h3>
-              <p className="text-gray-600">
-                {t("newTicketDescription")}
-              </p>
             </div>
           </Link>
 
