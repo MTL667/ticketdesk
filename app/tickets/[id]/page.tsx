@@ -110,12 +110,10 @@ export default function TicketDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mediaModal, setMediaModal] = useState<{ url: string; title: string; type: "image" | "video" } | null>(null);
 
-  // Prevent auto-scroll to bottom
+  // Scroll to top on page load (immediately, not after ticket loads)
   useEffect(() => {
-    if (pageRef.current) {
-      window.scrollTo(0, 0);
-    }
-  }, [ticket]);
+    window.scrollTo(0, 0);
+  }, [id]); // Only on ticket ID change (navigation)
 
   // Close modal on ESC key
   useEffect(() => {

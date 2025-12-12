@@ -132,22 +132,25 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
     return () => clearInterval(interval);
   }, [ticketId]);
 
-  // Only scroll to bottom when NEW comments are added (not on every refresh)
+  // Only scroll to bottom when NEW comments are added by user action (not on load/refresh)
   useEffect(() => {
-    // Skip scroll on initial load
+    // Skip scroll on initial load - wait until we have comments loaded at least once
     if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      prevCommentsCountRef.current = comments.length;
+      // Mark initial load complete only after we have fetched comments (even if empty)
+      if (!isLoading) {
+        isInitialLoadRef.current = false;
+        prevCommentsCountRef.current = comments.length;
+      }
       return;
     }
     
-    // Only scroll if there are more comments than before
-    if (comments.length > prevCommentsCountRef.current) {
+    // Only scroll if there are more comments than before (new comment added)
+    if (comments.length > prevCommentsCountRef.current && prevCommentsCountRef.current > 0) {
       commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     
     prevCommentsCountRef.current = comments.length;
-  }, [comments]);
+  }, [comments, isLoading]);
 
   return (
     <div className="bg-white rounded-lg shadow-md">
