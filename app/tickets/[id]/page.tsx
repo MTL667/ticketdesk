@@ -30,6 +30,26 @@ interface TicketDetail {
   }>;
 }
 
+// Helper to detect file type from URL or title
+function getFileType(url: string, title: string): "image" | "video" | "other" {
+  const lower = (url + title).toLowerCase();
+  if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)/.test(lower)) return "image";
+  if (/\.(mp4|webm|mov|avi|mkv)/.test(lower)) return "video";
+  return "other";
+}
+
+function getFileIcon(url: string, title: string): string {
+  const type = getFileType(url, title);
+  if (type === "image") return "🖼️";
+  if (type === "video") return "🎬";
+  const lower = (url + title).toLowerCase();
+  if (/\.(pdf)/.test(lower)) return "📄";
+  if (/\.(doc|docx)/.test(lower)) return "📝";
+  if (/\.(xls|xlsx)/.test(lower)) return "📊";
+  if (/\.(zip|rar|7z)/.test(lower)) return "📦";
+  return "📎";
+}
+
 function formatDate(dateString: string): string {
   try {
     const date = new Date(parseInt(dateString));
@@ -88,6 +108,7 @@ export default function TicketDetailPage() {
   
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mediaModal, setMediaModal] = useState<{ url: string; title: string; type: "image" | "video" } | null>(null);
 
   // Prevent auto-scroll to bottom
   useEffect(() => {
@@ -95,6 +116,17 @@ export default function TicketDetailPage() {
       window.scrollTo(0, 0);
     }
   }, [ticket]);
+
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mediaModal) {
+        setMediaModal(null);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mediaModal]);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -265,19 +297,75 @@ export default function TicketDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   {t("attachments")}
                 </h2>
+                
+                {/* Image/Video Thumbnails */}
+                {ticket.attachments.some(a => getFileType(a.url, a.title) === "image" || getFileType(a.url, a.title) === "video") && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                    {ticket.attachments
+                      .filter(a => getFileType(a.url, a.title) === "image" || getFileType(a.url, a.title) === "video")
+                      .map((attachment) => {
+                        const type = getFileType(attachment.url, attachment.title);
+                        return (
+                          <button
+                            key={attachment.id}
+                            onClick={() => setMediaModal({ url: attachment.url, title: attachment.title, type: type as "image" | "video" })}
+                            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all group"
+                          >
+                            {type === "image" ? (
+                              <img
+                                src={attachment.url}
+                                alt={attachment.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                <span className="text-4xl">▶️</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-2xl">
+                                {type === "image" ? "🔍" : "▶️"}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+                
+                {/* Other Files List */}
                 <div className="space-y-2">
-                  {ticket.attachments.map((attachment) => (
-                    <a
-                      key={attachment.id}
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-gray-50"
-                    >
-                      <span>📎</span>
-                      <span>{attachment.title || "Attachment"}</span>
-                    </a>
-                  ))}
+                  {ticket.attachments.map((attachment) => {
+                    const type = getFileType(attachment.url, attachment.title);
+                    const icon = getFileIcon(attachment.url, attachment.title);
+                    
+                    if (type === "image" || type === "video") {
+                      // Show as smaller link under thumbnails
+                      return (
+                        <button
+                          key={attachment.id}
+                          onClick={() => setMediaModal({ url: attachment.url, title: attachment.title, type })}
+                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-gray-50 text-sm w-full text-left"
+                        >
+                          <span>{icon}</span>
+                          <span className="truncate">{attachment.title || "Attachment"}</span>
+                        </button>
+                      );
+                    }
+                    
+                    return (
+                      <a
+                        key={attachment.id}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-gray-50"
+                      >
+                        <span>{icon}</span>
+                        <span>{attachment.title || "Attachment"}</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -389,6 +477,65 @@ export default function TicketDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Media Modal/Lightbox */}
+        {mediaModal && (
+          <div 
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            onClick={() => setMediaModal(null)}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setMediaModal(null)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl font-light z-10"
+            >
+              ×
+            </button>
+            
+            {/* Title */}
+            <div className="absolute top-4 left-4 text-white text-sm bg-black/50 px-3 py-1 rounded">
+              {mediaModal.title}
+            </div>
+            
+            {/* Download button */}
+            <a
+              href={mediaModal.url}
+              download
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-4 right-16 text-white hover:text-gray-300 bg-black/50 px-3 py-1 rounded text-sm"
+            >
+              ⬇️ Download
+            </a>
+            
+            {/* Content */}
+            <div 
+              className="max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {mediaModal.type === "image" ? (
+                <img
+                  src={mediaModal.url}
+                  alt={mediaModal.title}
+                  className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                />
+              ) : (
+                <video
+                  src={mediaModal.url}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
+            </div>
+            
+            {/* Keyboard hint */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs">
+              {t("closeModal") || "Klik ergens of druk ESC om te sluiten"}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
