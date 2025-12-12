@@ -32,14 +32,14 @@ export async function GET(request: NextRequest) {
     // Get last sync info
     const lastSync = await getLastSyncStatus();
     
-    // Auto-sync only once per hour (sync takes ~16 minutes for large lists)
-    const ONE_HOUR = 60 * 60 * 1000;
+    // Auto-sync every 10 minutes
+    const TEN_MINUTES = 10 * 60 * 1000;
     const shouldAutoSync = !lastSync || 
       (lastSync.status === "completed" && lastSync.completedAt && 
-       new Date().getTime() - lastSync.completedAt.getTime() > ONE_HOUR);
+       new Date().getTime() - lastSync.completedAt.getTime() > TEN_MINUTES);
 
     if (shouldAutoSync && !(await isSyncRunning())) {
-      console.log("Auto-sync triggered (data older than 1 hour)");
+      console.log("Auto-sync triggered (data older than 10 minutes)");
       // Trigger background sync (don't await)
       syncTicketsFromClickUp().catch(console.error);
     }
