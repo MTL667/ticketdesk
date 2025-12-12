@@ -5,8 +5,17 @@ import prisma from "@/lib/prisma";
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
+// Minimum file size to show (10KB) - filters out small icons/logos
+const MIN_ATTACHMENT_SIZE = 10 * 1024;
+
+// Check if file is likely an icon/logo based on name
+function isLikelyIcon(title: string): boolean {
+  const iconPatterns = /\b(icon|logo|badge|avatar|favicon|social|linkedin|facebook|instagram|twitter|x-logo|email-icon|phone-icon|signature)\b/i;
+  return iconPatterns.test(title);
+}
+
 // Fetch and cache attachments from ClickUp
-async function getAttachments(ticketId: string): Promise<Array<{ id: string; url: string; title: string }>> {
+async function getAttachments(ticketId: string): Promise<Array<{ id: string; url: string; title: string; size?: number }>> {
   // First check if we already have cached attachments
   const cachedAttachments = await prisma.attachment.findMany({
     where: { ticketId },
@@ -14,11 +23,25 @@ async function getAttachments(ticketId: string): Promise<Array<{ id: string; url
   });
 
   if (cachedAttachments.length > 0) {
-    return cachedAttachments.map(a => ({
-      id: a.id,
-      url: a.url,
-      title: a.title,
-    }));
+    // Filter out small images (likely icons/logos)
+    return cachedAttachments
+      .filter(a => {
+        // Keep if no size info (can't determine)
+        if (!a.size) return true;
+        // Filter small image files
+        const ext = (a.extension || a.title || '').toLowerCase();
+        const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/.test(ext) || /^(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(ext);
+        if (isImage && a.size < MIN_ATTACHMENT_SIZE) return false;
+        // Filter by name patterns
+        if (isLikelyIcon(a.title)) return false;
+        return true;
+      })
+      .map(a => ({
+        id: a.id,
+        url: a.url,
+        title: a.title,
+        size: a.size || undefined,
+      }));
   }
 
   // Fetch from ClickUp and cache
@@ -69,11 +92,25 @@ async function getAttachments(ticketId: string): Promise<Array<{ id: string; url
         })
       );
 
-      return attachments.map((att: any) => ({
-        id: att.id,
-        url: att.url,
-        title: att.title || att.filename || "Attachment",
-      }));
+      // Filter out small images (likely icons/logos)
+      return attachments
+        .filter((att: any) => {
+          const size = att.size || 0;
+          const title = att.title || att.filename || '';
+          const ext = (att.extension || title || '').toLowerCase();
+          const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/.test(ext) || /^(jpg|jpeg|png|gif|webp|bmp|svg)$/.test(ext);
+          // Filter small image files
+          if (isImage && size > 0 && size < MIN_ATTACHMENT_SIZE) return false;
+          // Filter by name patterns
+          if (isLikelyIcon(title)) return false;
+          return true;
+        })
+        .map((att: any) => ({
+          id: att.id,
+          url: att.url,
+          title: att.title || att.filename || "Attachment",
+          size: att.size || undefined,
+        }));
     }
 
     return [];
