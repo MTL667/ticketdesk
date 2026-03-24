@@ -214,6 +214,7 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
   
   let totalSynced = 0;
   let totalFetched = 0;
+  const allSyncedIds = new Set<string>();
   
   try {
     for (const listId of listIds) {
@@ -230,6 +231,9 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
         hasMore = more;
         
         if (tasks.length > 0) {
+          for (const task of tasks) {
+            allSyncedIds.add(task.id);
+          }
           console.log(`Got ${tasks.length} tasks, saving to database...`);
           const saved = await saveTasks(tasks);
           totalSynced += saved;
@@ -262,6 +266,19 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
+    // Remove tickets from DB that no longer exist in ClickUp
+    const syncedTaskIds = allSyncedIds;
+    if (syncedTaskIds.size > 0) {
+      const deleteResult = await prisma.ticket.deleteMany({
+        where: {
+          id: { notIn: Array.from(syncedTaskIds) },
+        },
+      });
+      if (deleteResult.count > 0) {
+        console.log(`🗑️ Removed ${deleteResult.count} tickets no longer in ClickUp`);
+      }
+    }
+
     const duration = Date.now() - startTime;
     
     // Mark as completed
