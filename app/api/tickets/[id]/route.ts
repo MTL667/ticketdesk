@@ -55,7 +55,9 @@ async function getAttachments(ticketId: string): Promise<Array<{ id: string; url
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch task ${ticketId} for attachments:`, response.status);
+      if (response.status !== 404) {
+        console.error(`Failed to fetch task ${ticketId} for attachments:`, response.status);
+      }
       return [];
     }
 
