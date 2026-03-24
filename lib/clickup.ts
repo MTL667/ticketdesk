@@ -2,6 +2,13 @@ const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_LIST_IDS = process.env.CLICKUP_LIST_IDS; // Comma-separated list IDs
 const CLICKUP_API_BASE = "https://api.clickup.com/api/v2";
 
+export class ClickUpNotFoundError extends Error {
+  constructor(taskId: string) {
+    super(`Task ${taskId} not found or deleted in ClickUp`);
+    this.name = "ClickUpNotFoundError";
+  }
+}
+
 export interface ClickUpTask {
   id: string;
   name: string;
@@ -211,6 +218,9 @@ export async function getTask(taskId: string): Promise<ClickUpTask> {
   });
 
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new ClickUpNotFoundError(taskId);
+    }
     const error = await response.text();
     throw new Error(`ClickUp API error: ${response.status} - ${error}`);
   }
@@ -267,6 +277,9 @@ export async function getTaskComments(taskId: string): Promise<ClickUpComment[]>
   });
 
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new ClickUpNotFoundError(taskId);
+    }
     const error = await response.text();
     throw new Error(`ClickUp API error: ${response.status} - ${error}`);
   }
@@ -285,11 +298,14 @@ export async function postTaskComment(taskId: string, commentText: string): Prom
     },
     body: JSON.stringify({
       comment_text: commentText,
-      notify_all: true, // Notify all task members
+      notify_all: true,
     }),
   });
 
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new ClickUpNotFoundError(taskId);
+    }
     const error = await response.text();
     throw new Error(`ClickUp API error: ${response.status} - ${error}`);
   }

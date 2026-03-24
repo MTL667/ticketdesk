@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getTaskComments, postTaskComment, getTask, filterTasksByEmail } from "@/lib/clickup";
+import { getTaskComments, postTaskComment, getTask, filterTasksByEmail, ClickUpNotFoundError } from "@/lib/clickup";
+import prisma from "@/lib/prisma";
 
 // GET /api/tickets/[id]/comments - Get all comments for a ticket
 export async function GET(
@@ -16,23 +17,30 @@ export async function GET(
 
     const { id } = await params;
 
-    // Verify the ticket belongs to the user
-    const task = await getTask(id);
-    const userTasks = filterTasksByEmail([task], session.user.email);
-    
-    if (userTasks.length === 0) {
-      return NextResponse.json(
-        { message: "Access denied" },
-        { status: 403 }
-      );
+    // Verify ticket exists in local DB and belongs to user
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id,
+        userEmail: { equals: session.user.email, mode: "insensitive" },
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
     }
 
-    // Get comments
     const comments = await getTaskComments(id);
 
     return NextResponse.json({ comments });
   } catch (error) {
-    console.error(`[GET /api/tickets/${(await params).id}/comments] Error:`, error);
+    const { id } = await params;
+    if (error instanceof ClickUpNotFoundError) {
+      return NextResponse.json(
+        { message: "This ticket has been removed from ClickUp. Messages are no longer available.", deleted: true },
+        { status: 404 }
+      );
+    }
+    console.error(`[GET /api/tickets/${id}/comments] Error:`, error);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Error fetching comments" },
       { status: 500 }
@@ -63,23 +71,30 @@ export async function POST(
       );
     }
 
-    // Verify the ticket belongs to the user
-    const task = await getTask(id);
-    const userTasks = filterTasksByEmail([task], session.user.email);
-    
-    if (userTasks.length === 0) {
-      return NextResponse.json(
-        { message: "Access denied" },
-        { status: 403 }
-      );
+    // Verify ticket exists in local DB and belongs to user
+    const ticket = await prisma.ticket.findFirst({
+      where: {
+        id,
+        userEmail: { equals: session.user.email, mode: "insensitive" },
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json({ message: "Ticket not found" }, { status: 404 });
     }
 
-    // Post the comment
     const newComment = await postTaskComment(id, comment.trim());
 
     return NextResponse.json({ comment: newComment }, { status: 201 });
   } catch (error) {
-    console.error(`[POST /api/tickets/${(await params).id}/comments] Error:`, error);
+    const { id } = await params;
+    if (error instanceof ClickUpNotFoundError) {
+      return NextResponse.json(
+        { message: "This ticket has been removed from ClickUp. Sending messages is no longer possible.", deleted: true },
+        { status: 404 }
+      );
+    }
+    console.error(`[POST /api/tickets/${id}/comments] Error:`, error);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Error posting comment" },
       { status: 500 }

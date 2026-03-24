@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/admin";
-import { testZabbixConnection, getZabbixHosts, getZabbixConfig, getZabbixWebScenarios } from "@/lib/zabbix";
+import { testZabbixConnection, getZabbixHosts, getZabbixConfig } from "@/lib/zabbix";
 
-// GET - test connection and get hosts (optionally with web scenarios for a specific host)
-export async function GET(request: NextRequest) {
+// GET - test connection and get hosts
+export async function GET() {
   try {
     const session = await auth();
 
@@ -34,30 +34,6 @@ export async function GET(request: NextRequest) {
         connected: false,
         message: connectionTest.message,
       });
-    }
-
-    // Check if we're fetching web scenarios for a specific host
-    const { searchParams } = new URL(request.url);
-    const hostId = searchParams.get("hostId");
-
-    if (hostId) {
-      // Return web scenarios for this host
-      try {
-        const webScenarios = await getZabbixWebScenarios(hostId, config);
-        return NextResponse.json({
-          webScenarios: webScenarios.map((ws) => ({
-            id: ws.httptestid,
-            name: ws.name,
-            hostId: ws.hostid,
-            enabled: ws.status === "0",
-          })),
-        });
-      } catch (error) {
-        return NextResponse.json({
-          webScenarios: [],
-          error: error instanceof Error ? error.message : "Error fetching web scenarios",
-        });
-      }
     }
 
     // Get hosts

@@ -28,18 +28,25 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleted, setIsDeleted] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const prevCommentsCountRef = useRef<number>(0);
   const isInitialLoadRef = useRef<boolean>(true);
 
   // Fetch comments
   const fetchComments = async () => {
+    if (isDeleted) return;
     try {
       setError(null);
       const response = await fetch(`/api/tickets/${ticketId}/comments`);
       
       if (!response.ok) {
-        throw new Error("Failed to load comments");
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 404 && data.deleted) {
+          setIsDeleted(true);
+          return;
+        }
+        throw new Error(data.message || "Failed to load comments");
       }
 
       const data = await response.json();
@@ -177,7 +184,13 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
 
       {/* Comments List */}
       <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-        {isLoading && comments.length === 0 ? (
+        {isDeleted ? (
+          <div className="text-center py-8 text-amber-600">
+            <p className="mb-2 text-2xl">⚠️</p>
+            <p className="font-medium">{t("ticketDeletedFromClickUp") || "Dit ticket is verwijderd uit ClickUp."}</p>
+            <p className="text-sm text-amber-500 mt-1">{t("messagesUnavailable") || "Berichten zijn niet meer beschikbaar."}</p>
+          </div>
+        ) : isLoading && comments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <div className="animate-pulse">{t("loadingMessages")}</div>
           </div>
@@ -251,28 +264,30 @@ export function TicketComments({ ticketId, userEmail }: TicketCommentsProps) {
       )}
 
       {/* Input Form */}
-      <div className="border-t border-gray-200 p-4">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder={t("typeMessage")}
-            disabled={isSubmitting}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-          />
-          <button
-            type="submit"
-            disabled={isSubmitting || !newComment.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-          >
-            {isSubmitting ? "..." : t("send")}
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 mt-2">
-          💡 {t("messageNotification")}
-        </p>
-      </div>
+      {!isDeleted && (
+        <div className="border-t border-gray-200 p-4">
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder={t("typeMessage")}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+            <button
+              type="submit"
+              disabled={isSubmitting || !newComment.trim()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
+            >
+              {isSubmitting ? "..." : t("send")}
+            </button>
+          </form>
+          <p className="text-xs text-gray-500 mt-2">
+            💡 {t("messageNotification")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

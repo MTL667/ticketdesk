@@ -293,22 +293,57 @@ export default function TicketDetailPage() {
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t("attachments")} ({ticket.attachments.length})
+                  {t("attachments")}
                 </h2>
                 
-                {/* Files List - no thumbnails */}
-                <div className="space-y-1">
+                {/* Image/Video Thumbnails */}
+                {ticket.attachments.some(a => getFileType(a.url, a.title) === "image" || getFileType(a.url, a.title) === "video") && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                    {ticket.attachments
+                      .filter(a => getFileType(a.url, a.title) === "image" || getFileType(a.url, a.title) === "video")
+                      .map((attachment) => {
+                        const type = getFileType(attachment.url, attachment.title);
+                        return (
+                          <button
+                            key={attachment.id}
+                            onClick={() => setMediaModal({ url: attachment.url, title: attachment.title, type: type as "image" | "video" })}
+                            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all group"
+                          >
+                            {type === "image" ? (
+                              <img
+                                src={attachment.url}
+                                alt={attachment.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                <span className="text-4xl">▶️</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-2xl">
+                                {type === "image" ? "🔍" : "▶️"}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+                
+                {/* Other Files List */}
+                <div className="space-y-2">
                   {ticket.attachments.map((attachment) => {
                     const type = getFileType(attachment.url, attachment.title);
                     const icon = getFileIcon(attachment.url, attachment.title);
                     
                     if (type === "image" || type === "video") {
-                      // Images/videos open in lightbox
+                      // Show as smaller link under thumbnails
                       return (
                         <button
                           key={attachment.id}
                           onClick={() => setMediaModal({ url: attachment.url, title: attachment.title, type })}
-                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-gray-50 w-full text-left"
+                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-gray-50 text-sm w-full text-left"
                         >
                           <span>{icon}</span>
                           <span className="truncate">{attachment.title || "Attachment"}</span>
@@ -316,7 +351,6 @@ export default function TicketDetailPage() {
                       );
                     }
                     
-                    // Other files download directly
                     return (
                       <a
                         key={attachment.id}
