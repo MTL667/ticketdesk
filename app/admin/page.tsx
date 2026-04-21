@@ -281,6 +281,16 @@ export default function AdminPage() {
           {language === "nl" ? "Admin Panel" : language === "fr" ? "Panneau d'administration" : "Admin Panel"}
         </h1>
 
+        {/* Quick links */}
+        <div className="mb-6 flex flex-wrap gap-3">
+          <Link
+            href="/admin/users"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium text-gray-700"
+          >
+            👤 {language === "nl" ? "Gebruikersbeheer" : language === "fr" ? "Gestion des utilisateurs" : "User management"}
+          </Link>
+        </div>
+
         {/* Banner Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
