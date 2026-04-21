@@ -36,6 +36,24 @@ interface UserDetail {
   tickets: Ticket[];
 }
 
+type SortKey = "ticketId" | "name" | "status" | "priority" | "app" | "clickupCreatedAt";
+type SortDir = "asc" | "desc";
+
+const PRIORITY_ORDER: Record<string, number> = {
+  urgent: 0,
+  high: 1,
+  normal: 2,
+  low: 3,
+};
+
+function compareValues(a: unknown, b: unknown): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b), undefined, { sensitivity: "base" });
+}
+
 function statusColor(status: string): string {
   const s = status.toLowerCase();
   if (s.includes("done") || s.includes("complete") || s.includes("closed")) return "bg-green-100 text-green-700";
@@ -70,9 +88,46 @@ export default function AdminUsersPage() {
 
   const [selected, setSelected] = useState<UserDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("clickupCreatedAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const t = (nl: string, fr: string, en: string) =>
     language === "nl" ? nl : language === "fr" ? fr : en;
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir(key === "clickupCreatedAt" ? "desc" : "asc");
+    }
+  };
+
+  const sortedTickets = (() => {
+    if (!selected) return [];
+    const copy = [...selected.tickets];
+    copy.sort((a, b) => {
+      let av: unknown = a[sortKey];
+      let bv: unknown = b[sortKey];
+
+      if (sortKey === "priority") {
+        av = PRIORITY_ORDER[(a.priority || "").toLowerCase()] ?? 999;
+        bv = PRIORITY_ORDER[(b.priority || "").toLowerCase()] ?? 999;
+      } else if (sortKey === "clickupCreatedAt") {
+        av = new Date(a.clickupCreatedAt).getTime();
+        bv = new Date(b.clickupCreatedAt).getTime();
+      }
+
+      const result = compareValues(av, bv);
+      return sortDir === "asc" ? result : -result;
+    });
+    return copy;
+  })();
+
+  const sortArrow = (key: SortKey) => {
+    if (sortKey !== key) return <span className="text-gray-300 ml-1">↕</span>;
+    return <span className="text-blue-600 ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  };
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -311,31 +366,66 @@ export default function AdminUsersPage() {
                       <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
+                            <th
+                              onClick={() => toggleSort("ticketId")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
                               {t("Ticket", "Ticket", "Ticket")}
+                              {sortArrow("ticketId")}
                             </th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
+                            <th
+                              onClick={() => toggleSort("name")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
                               {t("Naam", "Nom", "Name")}
+                              {sortArrow("name")}
                             </th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
+                            <th
+                              onClick={() => toggleSort("status")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
                               {t("Status", "Statut", "Status")}
+                              {sortArrow("status")}
                             </th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
+                            <th
+                              onClick={() => toggleSort("priority")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
                               {t("Prioriteit", "Priorité", "Priority")}
+                              {sortArrow("priority")}
                             </th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
+                            <th
+                              onClick={() => toggleSort("app")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
                               App
+                              {sortArrow("app")}
+                            </th>
+                            <th
+                              onClick={() => toggleSort("clickupCreatedAt")}
+                              className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs cursor-pointer hover:bg-gray-100 select-none"
+                            >
+                              {t("Aangemaakt", "Créé", "Created")}
+                              {sortArrow("clickupCreatedAt")}
                             </th>
                             <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase text-xs">
-                              {t("Aangemaakt", "Créé", "Created")}
+                              {t("Open", "Ouvrir", "Open")}
                             </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {selected.tickets.map((ticket) => (
+                          {sortedTickets.map((ticket) => (
                             <tr key={ticket.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-2 font-mono text-xs text-blue-700">
-                                {ticket.ticketId || ticket.id.slice(0, 8)}
+                              <td className="px-4 py-2 font-mono text-xs">
+                                <a
+                                  href={`https://app.clickup.com/t/${ticket.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-700 hover:text-blue-900 hover:underline"
+                                  title={t("Open in ClickUp", "Ouvrir dans ClickUp", "Open in ClickUp")}
+                                >
+                                  {ticket.ticketId || ticket.id.slice(0, 8)}
+                                </a>
                               </td>
                               <td className="px-4 py-2 text-gray-900 max-w-xs truncate" title={ticket.name}>
                                 {ticket.name}
@@ -349,6 +439,30 @@ export default function AdminUsersPage() {
                               <td className="px-4 py-2 text-gray-600">{ticket.app || "-"}</td>
                               <td className="px-4 py-2 text-gray-500 text-xs whitespace-nowrap">
                                 {formatDate(ticket.clickupCreatedAt)}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={`https://app.clickup.com/t/${ticket.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-medium"
+                                    title={t("Open in ClickUp", "Ouvrir dans ClickUp", "Open in ClickUp")}
+                                  >
+                                    ClickUp ↗
+                                  </a>
+                                  {ticket.jiraUrl && (
+                                    <a
+                                      href={ticket.jiraUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs px-2 py-1 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 font-medium"
+                                      title={t("Open in Jira", "Ouvrir dans Jira", "Open in Jira")}
+                                    >
+                                      Jira ↗
+                                    </a>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
