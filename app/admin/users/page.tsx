@@ -90,6 +90,7 @@ export default function AdminUsersPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("clickupCreatedAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const t = (nl: string, fr: string, en: string) =>
     language === "nl" ? nl : language === "fr" ? fr : en;
@@ -182,6 +183,7 @@ export default function AdminUsersPage() {
       if (response.ok) {
         const data = await response.json();
         setSelected(data);
+        setSidebarOpen(false);
       }
     } catch (error) {
       console.error("Error fetching user detail:", error);
@@ -249,61 +251,84 @@ export default function AdminUsersPage() {
           )}
         </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: search + list */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("Zoek e-mail...", "Rechercher e-mail...", "Search email...")}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                >
-                  {t("Zoek", "Chercher", "Search")}
-                </button>
-              </form>
-
-              <div className="text-xs text-gray-500 mb-2">
-                {users.length} {t("gebruiker(s)", "utilisateur(s)", "user(s)")}
-              </div>
-
-              <div className="space-y-1 max-h-[600px] overflow-y-auto">
-                {loadingUsers ? (
-                  <div className="text-center py-4 text-gray-400 text-sm animate-pulse">
-                    {t("Laden...", "Chargement...", "Loading...")}
-                  </div>
-                ) : users.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm">
-                    {t("Geen gebruikers gevonden", "Aucun utilisateur trouvé", "No users found")}
-                  </div>
-                ) : (
-                  users.map((user) => (
+        <div className={`grid grid-cols-1 gap-6 ${sidebarOpen ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
+          {/* Left: search + list (collapsible) */}
+          {sidebarOpen && (
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={t("Zoek e-mail...", "Rechercher e-mail...", "Search email...")}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
+                    />
                     <button
-                      key={user.email}
-                      onClick={() => loadUserDetail(user.email)}
-                      className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors ${
-                        selected?.email === user.email ? "bg-blue-50 border border-blue-200" : ""
-                      }`}
+                      type="submit"
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
                     >
-                      <div className="text-sm font-medium text-gray-900 truncate">{user.email}</div>
-                      <div className="text-xs text-gray-500">
-                        {user.total} {t("tickets", "tickets", "tickets")}
-                      </div>
+                      {t("Zoek", "Chercher", "Search")}
                     </button>
-                  ))
-                )}
+                  </form>
+                  {selected && (
+                    <button
+                      onClick={() => setSidebarOpen(false)}
+                      className="p-2 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100"
+                      title={t("Verbergen", "Masquer", "Hide")}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-xs text-gray-500 mb-2">
+                  {users.length} {t("gebruiker(s)", "utilisateur(s)", "user(s)")}
+                </div>
+
+                <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                  {loadingUsers ? (
+                    <div className="text-center py-4 text-gray-400 text-sm animate-pulse">
+                      {t("Laden...", "Chargement...", "Loading...")}
+                    </div>
+                  ) : users.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      {t("Geen gebruikers gevonden", "Aucun utilisateur trouvé", "No users found")}
+                    </div>
+                  ) : (
+                    users.map((user) => (
+                      <button
+                        key={user.email}
+                        onClick={() => loadUserDetail(user.email)}
+                        className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors ${
+                          selected?.email === user.email ? "bg-blue-50 border border-blue-200" : ""
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-gray-900 truncate">{user.email}</div>
+                        <div className="text-xs text-gray-500">
+                          {user.total} {t("tickets", "tickets", "tickets")}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Right: detail */}
-          <div className="lg:col-span-2">
+          <div className={sidebarOpen ? "lg:col-span-2" : "lg:col-span-1"}>
+            {!sidebarOpen && (
+              <div className="mb-4">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium text-gray-700"
+                >
+                  🔍 {t("Andere gebruiker zoeken", "Chercher un autre utilisateur", "Search another user")}
+                </button>
+              </div>
+            )}
             {loadingDetail ? (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center text-gray-400 animate-pulse">
                 {t("Laden...", "Chargement...", "Loading...")}
