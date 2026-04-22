@@ -130,3 +130,113 @@ export async function getMessageDetail(msgId: string): Promise<SendGridMessageDe
 export function isSendGridConfigured(): boolean {
   return !!process.env.SENDGRID_API_KEY;
 }
+
+// ----- Suppression lists -----
+// Docs:
+//   https://www.twilio.com/docs/sendgrid/api-reference/bounces-api
+//   https://www.twilio.com/docs/sendgrid/api-reference/blocks-api
+//   https://www.twilio.com/docs/sendgrid/api-reference/invalid-e-mails-api
+//   https://www.twilio.com/docs/sendgrid/api-reference/spam-reports-api
+
+export type SuppressionType = "bounces" | "blocks" | "invalid_emails" | "spam_reports";
+
+export interface SuppressionEntry {
+  email: string;
+  created: number; // unix seconds
+  reason?: string;
+  status?: string;
+}
+
+async function getSuppressionForList(
+  type: SuppressionType,
+  email: string
+): Promise<SuppressionEntry | null> {
+  const apiKey = getApiKey();
+
+  const response = await fetch(
+    `${SENDGRID_API_BASE}/suppression/${type}/${encodeURIComponent(email)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new SendGridError(
+      `SendGrid API error (${type}): ${response.status} - ${text}`,
+      response.status
+    );
+  }
+
+  const data = await response.json();
+
+  // API returns either an array of entries or empty array when not found
+  if (Array.isArray(data)) {
+    if (data.length === 0) return null;
+    return data[0] as SuppressionEntry;
+  }
+
+  if (data && typeof data === "object" && data.email) {
+    return data as SuppressionEntry;
+  }
+
+  return null;
+}
+
+export interface SuppressionStatus {
+  email: string;
+  bounces: SuppressionEntry | null;
+  blocks: SuppressionEntry | null;
+  invalid_emails: SuppressionEntry | null;
+  spam_reports: SuppressionEntry | null;
+}
+
+export async function getSuppressionStatus(email: string): Promise<SuppressionStatus> {
+  const [bounces, blocks, invalid, spam] = await Promise.all([
+    getSuppressionForList("bounces", email).catch(() => null),
+    getSuppressionForList("blocks", email).catch(() => null),
+    getSuppressionForList("invalid_emails", email).catch(() => null),
+    getSuppressionForList("spam_reports", email).catch(() => null),
+  ]);
+
+  return {
+    email,
+    bounces,
+    blocks,
+    invalid_emails: invalid,
+    spam_reports: spam,
+  };
+}
+
+export async function removeFromSuppressionList(
+  type: SuppressionType,
+  email: string
+): Promise<void> {
+  const apiKey = getApiKey();
+
+  const response = await fetch(
+    `${SENDGRID_API_BASE}/suppression/${type}/${encodeURIComponent(email)}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok && response.status !== 204) {
+    const text = await response.text();
+    throw new SendGridError(
+      `SendGrid API error removing from ${type}: ${response.status} - ${text}`,
+      response.status
+    );
+  }
+}

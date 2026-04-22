@@ -37,6 +37,30 @@ interface MessageDetail extends MessageSummary {
   template_id?: string;
 }
 
+type SuppressionType = "bounces" | "blocks" | "invalid_emails" | "spam_reports";
+
+interface SuppressionEntry {
+  email: string;
+  created: number;
+  reason?: string;
+  status?: string;
+}
+
+interface SuppressionStatus {
+  email: string;
+  bounces: SuppressionEntry | null;
+  blocks: SuppressionEntry | null;
+  invalid_emails: SuppressionEntry | null;
+  spam_reports: SuppressionEntry | null;
+}
+
+const SUPPRESSION_LABELS: Record<SuppressionType, { nl: string; fr: string; en: string; color: string }> = {
+  bounces: { nl: "Bounces", fr: "Bounces", en: "Bounces", color: "bg-red-100 text-red-700 border-red-300" },
+  blocks: { nl: "Blocks", fr: "Blocks", en: "Blocks", color: "bg-orange-100 text-orange-700 border-orange-300" },
+  invalid_emails: { nl: "Ongeldige e-mails", fr: "E-mails invalides", en: "Invalid emails", color: "bg-yellow-100 text-yellow-700 border-yellow-300" },
+  spam_reports: { nl: "Spamrapporten", fr: "Signalements spam", en: "Spam reports", color: "bg-purple-100 text-purple-700 border-purple-300" },
+};
+
 function formatDate(iso: string | undefined): string {
   if (!iso) return "-";
   try {
@@ -104,6 +128,10 @@ export default function AdminEmailPage() {
   const [selected, setSelected] = useState<MessageDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  const [suppressions, setSuppressions] = useState<SuppressionStatus | null>(null);
+  const [loadingSuppressions, setLoadingSuppressions] = useState(false);
+  const [removingType, setRemovingType] = useState<SuppressionType | null>(null);
+
   const t = (nl: string, fr: string, en: string) =>
     language === "nl" ? nl : language === "fr" ? fr : en;
 
@@ -130,6 +158,60 @@ export default function AdminEmailPage() {
     }
   };
 
+  const fetchSuppressions = async (emailAddr: string) => {
+    setLoadingSuppressions(true);
+    try {
+      const response = await fetch(
+        `/api/admin/email/suppressions?email=${encodeURIComponent(emailAddr)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSuppressions(data);
+      } else {
+        setSuppressions(null);
+      }
+    } catch (err) {
+      console.error("Error fetching suppressions:", err);
+      setSuppressions(null);
+    } finally {
+      setLoadingSuppressions(false);
+    }
+  };
+
+  const removeFromSuppression = async (type: SuppressionType) => {
+    if (!suppressions) return;
+    const emailAddr = suppressions.email;
+
+    const confirmed = window.confirm(
+      t(
+        `Weet je zeker dat je ${emailAddr} van de "${SUPPRESSION_LABELS[type].nl}" lijst wilt verwijderen?`,
+        `Confirmer la suppression de ${emailAddr} de la liste "${SUPPRESSION_LABELS[type].fr}" ?`,
+        `Are you sure you want to remove ${emailAddr} from the "${SUPPRESSION_LABELS[type].en}" list?`
+      )
+    );
+    if (!confirmed) return;
+
+    setRemovingType(type);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/email/suppressions?email=${encodeURIComponent(emailAddr)}&type=${type}`,
+        { method: "DELETE" }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || "Error removing from suppression list");
+        return;
+      }
+      // Refresh suppression status
+      await fetchSuppressions(emailAddr);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error removing from suppression list");
+    } finally {
+      setRemovingType(null);
+    }
+  };
+
   const search = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -139,14 +221,20 @@ export default function AdminEmailPage() {
     setMessages([]);
     setSelected(null);
     setSearched(false);
+    setSuppressions(null);
 
     try {
-      const response = await fetch(
-        `/api/admin/email?email=${encodeURIComponent(email.trim())}&days=${days}`
-      );
-      const data = await response.json();
+      const trimmed = email.trim();
 
-      if (!response.ok) {
+      // Fire both requests in parallel
+      const [activityRes] = await Promise.all([
+        fetch(`/api/admin/email?email=${encodeURIComponent(trimmed)}&days=${days}`),
+        fetchSuppressions(trimmed),
+      ]);
+
+      const data = await activityRes.json();
+
+      if (!activityRes.ok) {
         setError(data.message || "Error searching email activity");
         return;
       }
@@ -273,6 +361,92 @@ export default function AdminEmailPage() {
             </div>
           )}
         </div>
+
+        {/* Suppression status */}
+        {searched && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                🛡️ {t("Suppression status", "Statut de suppression", "Suppression status")}
+              </h2>
+              {loadingSuppressions && (
+                <span className="text-xs text-gray-400 animate-pulse">
+                  {t("Controleren...", "Vérification...", "Checking...")}
+                </span>
+              )}
+            </div>
+
+            {!suppressions ? (
+              <div className="text-sm text-gray-500">
+                {t("Niet beschikbaar", "Non disponible", "Not available")}
+              </div>
+            ) : (
+              (() => {
+                const types: SuppressionType[] = ["bounces", "blocks", "invalid_emails", "spam_reports"];
+                const active = types.filter((type) => suppressions[type] !== null);
+
+                if (active.length === 0) {
+                  return (
+                    <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-3 text-sm">
+                      ✓ {t(
+                        "Dit adres staat op géén enkele suppression-lijst bij SendGrid.",
+                        "Cette adresse n'est sur aucune liste de suppression chez SendGrid.",
+                        "This address is not on any SendGrid suppression list."
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {active.map((type) => {
+                      const entry = suppressions[type]!;
+                      const label = SUPPRESSION_LABELS[type];
+                      return (
+                        <div
+                          key={type}
+                          className={`border rounded-lg p-3 flex items-start justify-between gap-3 ${label.color}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-sm">
+                                {t(label.nl, label.fr, label.en)}
+                              </span>
+                              {entry.status && (
+                                <span className="text-xs font-mono bg-white/60 px-2 py-0.5 rounded">
+                                  {entry.status}
+                                </span>
+                              )}
+                            </div>
+                            {entry.reason && (
+                              <div className="text-xs mt-1 break-words">
+                                <span className="opacity-75">{t("Reden", "Raison", "Reason")}:</span> {entry.reason}
+                              </div>
+                            )}
+                            {entry.created && (
+                              <div className="text-xs opacity-75 mt-1">
+                                {t("Sinds", "Depuis", "Since")}: {formatDate(new Date(entry.created * 1000).toISOString())}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFromSuppression(type)}
+                            disabled={removingType === type}
+                            className="flex-shrink-0 px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                          >
+                            {removingType === type
+                              ? t("Bezig...", "En cours...", "Removing...")
+                              : t("Verwijder van lijst", "Retirer de la liste", "Remove from list")}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        )}
 
         {/* Results */}
         {searched && (
