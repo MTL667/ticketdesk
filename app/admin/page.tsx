@@ -289,6 +289,12 @@ export default function AdminPage() {
           >
             👤 {language === "nl" ? "Gebruikersbeheer" : language === "fr" ? "Gestion des utilisateurs" : "User management"}
           </Link>
+          <Link
+            href="/admin/email"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium text-gray-700"
+          >
+            📧 {language === "nl" ? "E-mail activiteit" : language === "fr" ? "Activité e-mail" : "Email activity"}
+          </Link>
         </div>
 
         {/* Banner Settings */}
