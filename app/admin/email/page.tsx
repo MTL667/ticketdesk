@@ -132,6 +132,14 @@ export default function AdminEmailPage() {
   const [loadingSuppressions, setLoadingSuppressions] = useState(false);
   const [removingType, setRemovingType] = useState<SuppressionType | null>(null);
 
+  // Full suppression list browser
+  const [activeTab, setActiveTab] = useState<"search" | "lists">("search");
+  const [listType, setListType] = useState<SuppressionType>("bounces");
+  const [listEntries, setListEntries] = useState<SuppressionEntry[]>([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [listFilter, setListFilter] = useState("");
+  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
+
   const t = (nl: string, fr: string, en: string) =>
     language === "nl" ? nl : language === "fr" ? fr : en;
 
@@ -142,6 +150,13 @@ export default function AdminEmailPage() {
       redirect("/signin");
     }
   }, [status]);
+
+  useEffect(() => {
+    if (activeTab === "lists" && isAdminUser) {
+      fetchSuppressionList(listType);
+    }
+     
+  }, [activeTab, listType, isAdminUser]);
 
   const checkAdmin = async () => {
     try {
@@ -175,6 +190,59 @@ export default function AdminEmailPage() {
       setSuppressions(null);
     } finally {
       setLoadingSuppressions(false);
+    }
+  };
+
+  const fetchSuppressionList = async (type: SuppressionType) => {
+    setLoadingList(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/email/suppressions/list?type=${type}&limit=500`
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || "Error loading suppression list");
+        setListEntries([]);
+        return;
+      }
+      setListEntries(data.entries || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error loading suppression list");
+      setListEntries([]);
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  const removeEntryFromList = async (type: SuppressionType, emailAddr: string) => {
+    const confirmed = window.confirm(
+      t(
+        `Weet je zeker dat je ${emailAddr} van de "${SUPPRESSION_LABELS[type].nl}" lijst wilt verwijderen?`,
+        `Confirmer la suppression de ${emailAddr} de la liste "${SUPPRESSION_LABELS[type].fr}" ?`,
+        `Are you sure you want to remove ${emailAddr} from the "${SUPPRESSION_LABELS[type].en}" list?`
+      )
+    );
+    if (!confirmed) return;
+
+    setRemovingEmail(emailAddr);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/email/suppressions?email=${encodeURIComponent(emailAddr)}&type=${type}`,
+        { method: "DELETE" }
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.message || "Error removing from suppression list");
+        return;
+      }
+      // Optimistically remove from current list
+      setListEntries((prev) => prev.filter((e) => e.email !== emailAddr));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error removing from suppression list");
+    } finally {
+      setRemovingEmail(null);
     }
   };
 
@@ -313,11 +381,40 @@ export default function AdminEmailPage() {
         </h1>
         <p className="text-sm text-gray-500 mb-6">
           {t(
-            "Zoek op e-mailadres om de laatste 30 dagen aan SendGrid-activiteit en hun traceroute te bekijken.",
-            "Rechercher par e-mail pour voir la dernière activité SendGrid et leur itinéraire.",
-            "Search by email to view the last 30 days of SendGrid activity and their event trace."
+            "Zoek op e-mailadres of beheer de SendGrid suppression-lijsten (bounces, blocks, ...).",
+            "Rechercher par e-mail ou gérer les listes de suppression SendGrid (bounces, blocks, ...).",
+            "Search by email or manage the SendGrid suppression lists (bounces, blocks, ...)."
           )}
         </p>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="flex gap-6 -mb-px">
+            <button
+              onClick={() => setActiveTab("search")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "search"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              🔍 {t("Zoek op e-mail", "Rechercher par e-mail", "Search by email")}
+            </button>
+            <button
+              onClick={() => setActiveTab("lists")}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "lists"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              🛡️ {t("Suppression-lijsten", "Listes de suppression", "Suppression lists")}
+            </button>
+          </nav>
+        </div>
+
+        {activeTab === "search" && (
+          <>
 
         {/* Search form */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
@@ -631,6 +728,106 @@ export default function AdminEmailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+          </>
+        )}
+
+        {activeTab === "lists" && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(SUPPRESSION_LABELS) as SuppressionType[]).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setListType(type)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      listType === type
+                        ? SUPPRESSION_LABELS[type].color + " border-current"
+                        : "bg-white border-gray-300 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {t(SUPPRESSION_LABELS[type].nl, SUPPRESSION_LABELS[type].fr, SUPPRESSION_LABELS[type].en)}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => fetchSuppressionList(listType)}
+                disabled={loadingList}
+                className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+              >
+                {loadingList ? t("Laden...", "Chargement...", "Loading...") : `🔄 ${t("Ververs", "Actualiser", "Refresh")}`}
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+              <input
+                type="text"
+                value={listFilter}
+                onChange={(e) => setListFilter(e.target.value)}
+                placeholder={t("Filter op e-mail...", "Filtrer par e-mail...", "Filter by email...")}
+                className="flex-1 min-w-[200px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="text-xs text-gray-500">
+                {(() => {
+                  const filtered = listFilter
+                    ? listEntries.filter((e) => e.email.toLowerCase().includes(listFilter.toLowerCase()))
+                    : listEntries;
+                  return `${filtered.length} / ${listEntries.length}`;
+                })()}
+              </div>
+            </div>
+
+            {error && (
+              <div className="px-4 py-3 bg-red-50 border-b border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            {loadingList ? (
+              <div className="p-12 text-center text-gray-400 text-sm animate-pulse">
+                {t("Laden...", "Chargement...", "Loading...")}
+              </div>
+            ) : listEntries.length === 0 ? (
+              <div className="p-12 text-center text-gray-500 text-sm">
+                {t("De lijst is leeg", "La liste est vide", "The list is empty")}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 max-h-[700px] overflow-y-auto">
+                {listEntries
+                  .filter((e) => !listFilter || e.email.toLowerCase().includes(listFilter.toLowerCase()))
+                  .map((entry) => (
+                    <div
+                      key={entry.email}
+                      className="p-3 flex items-start justify-between gap-3 hover:bg-gray-50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-sm text-gray-900 truncate">{entry.email}</div>
+                        {entry.reason && (
+                          <div className="text-xs text-gray-600 mt-1 break-words">
+                            <span className="text-gray-400">{t("Reden", "Raison", "Reason")}:</span> {entry.reason}
+                          </div>
+                        )}
+                        {entry.created && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatDate(new Date(entry.created * 1000).toISOString())}
+                            {entry.status && <span className="ml-2 font-mono">({entry.status})</span>}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeEntryFromList(listType, entry.email)}
+                        disabled={removingEmail === entry.email}
+                        className="flex-shrink-0 px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded hover:bg-red-50 hover:text-red-700 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                      >
+                        {removingEmail === entry.email
+                          ? t("Bezig...", "En cours...", "Removing...")
+                          : t("Verwijder", "Retirer", "Remove")}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </main>

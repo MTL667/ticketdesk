@@ -215,6 +215,41 @@ export async function getSuppressionStatus(email: string): Promise<SuppressionSt
   };
 }
 
+// List all entries of a suppression list with pagination
+export async function listSuppressions(
+  type: SuppressionType,
+  limit = 500,
+  offset = 0
+): Promise<SuppressionEntry[]> {
+  const apiKey = getApiKey();
+
+  const params = new URLSearchParams({
+    limit: String(Math.min(limit, 500)),
+    offset: String(offset),
+  });
+
+  const response = await fetch(
+    `${SENDGRID_API_BASE}/suppression/${type}?${params.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new SendGridError(
+      `SendGrid API error listing ${type}: ${response.status} - ${text}`,
+      response.status
+    );
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? (data as SuppressionEntry[]) : [];
+}
+
 export async function removeFromSuppressionList(
   type: SuppressionType,
   email: string
