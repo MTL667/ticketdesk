@@ -1,5 +1,5 @@
 import prisma from "./prisma";
-import { isJiraConfigured, parseJiraKeyFromUrl, fetchJiraIssuesBulk } from "./jira";
+import { isJiraConfigured, parseJiraKeyFromUrl, fetchJiraIssuesBulk, fetchSingleJiraIssue } from "./jira";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_LIST_IDS = process.env.CLICKUP_LIST_IDS;
@@ -305,36 +305,44 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
         const uniqueKeys = Array.from(keyToTicketIds.keys());
         console.log(`Found ${uniqueKeys.length} Jira keys from ${ticketsWithJira.length} tickets`);
 
-        // Debug: check specific ticket
-        const debugTicketId = "86c9h1w4d";
-        const debugTicket = ticketsWithJira.find(t => t.id === debugTicketId);
-        if (debugTicket) {
-          const debugKey = parseJiraKeyFromUrl(debugTicket.jiraUrl!);
-          console.log(`[debug] Ticket ${debugTicketId}: jiraUrl="${debugTicket.jiraUrl}", parsedKey="${debugKey}"`);
-          if (debugKey) {
-            const mapped = keyToTicketIds.get(debugKey);
-            console.log(`[debug] Key ${debugKey} maps to tickets: ${JSON.stringify(mapped)}`);
-          }
-        } else {
-          console.log(`[debug] Ticket ${debugTicketId} NOT found in ticketsWithJira (${ticketsWithJira.length} total)`);
-        }
-
         if (uniqueKeys.length > 0) {
           const jiraData = await fetchJiraIssuesBulk(uniqueKeys);
 
-          // Debug: check if key exists in Jira response
-          if (debugTicket) {
-            const debugKey = parseJiraKeyFromUrl(debugTicket.jiraUrl!);
-            if (debugKey) {
-              const jiraResult = jiraData.get(debugKey);
-              console.log(`[debug] Jira data for ${debugKey}: ${jiraResult ? JSON.stringify(jiraResult) : "NOT FOUND"}`);
+          // Fallback: keys not found in bulk search may be moved issues with stale keys.
+          // The /rest/api/3/issue/{key} endpoint follows key aliases, so individual
+          // lookups recover moved issues that JQL key IN (...) misses.
+          const missingKeys = uniqueKeys.filter(k => !jiraData.has(k));
+          if (missingKeys.length > 0) {
+            console.log(`[jira] ${missingKeys.length} keys not found in bulk search, trying individual lookups...`);
+            const FALLBACK_CONCURRENCY = 10;
+            let recovered = 0;
+
+            for (let i = 0; i < missingKeys.length; i += FALLBACK_CONCURRENCY) {
+              const chunk = missingKeys.slice(i, i + FALLBACK_CONCURRENCY);
+              const results = await Promise.allSettled(
+                chunk.map(key => fetchSingleJiraIssue(key))
+              );
+
+              for (let j = 0; j < results.length; j++) {
+                const r = results[j];
+                if (r.status === "fulfilled" && r.value) {
+                  jiraData.set(chunk[j], r.value);
+                  recovered++;
+                }
+              }
             }
+
+            console.log(`[jira] Recovered ${recovered}/${missingKeys.length} issues via individual lookup`);
           }
 
+          // Also handle bulk results returned under a different key (moved issues).
+          // Build a set of all searched keys that now have data, then update tickets.
           let jiraUpdated = 0;
           let jiraFailed = 0;
-          for (const [key, data] of jiraData) {
-            const ticketIds = keyToTicketIds.get(key) || [];
+          for (const [searchedKey, ticketIds] of keyToTicketIds) {
+            const data = jiraData.get(searchedKey);
+            if (!data) continue;
+
             for (const ticketId of ticketIds) {
               try {
                 await prisma.ticket.update({

@@ -169,6 +169,43 @@ async function searchJiraBatch(
 }
 
 /**
+ * Fetch a single Jira issue by key. Follows key aliases for moved issues,
+ * so searching for SPOQ-3127 returns the issue even if it was moved to FORMS-xxxx.
+ */
+export async function fetchSingleJiraIssue(key: string): Promise<JiraIssueData | null> {
+  const { baseUrl, authHeader } = getJiraAuth();
+
+  try {
+    const params = new URLSearchParams();
+    for (const f of JIRA_FIELDS.split(",")) {
+      params.append("fields", f);
+    }
+
+    const response = await jiraFetch(`${baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?${params}`, {
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const issue = await response.json();
+    return {
+      key: issue.key,
+      statusName: issue.fields?.status?.name || "Unknown",
+      statusCategory: issue.fields?.status?.statusCategory?.name || "Unknown",
+      statusCategoryKey: issue.fields?.status?.statusCategory?.key || "undefined",
+      assigneeDisplayName: issue.fields?.assignee?.displayName || null,
+      priorityName: issue.fields?.priority?.name || null,
+      updated: issue.fields?.updated || new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Fetch Jira issue data in bulk using JQL search.
  * Keys are batched in groups of 100 with up to 5 concurrent requests.
  */
