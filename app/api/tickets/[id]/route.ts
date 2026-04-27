@@ -172,6 +172,7 @@ export async function GET(
       jiraUrl: ticket.jiraUrl,
       jiraPriority: ticket.jiraPriority,
       jiraStatusCategory: ticket.jiraStatusCategory,
+      jiraStatusCategoryKey: ticket.jiraStatusCategoryKey,
       jiraLastUpdated: ticket.jiraLastUpdated?.toISOString() || null,
       attachments,
     };

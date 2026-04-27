@@ -285,7 +285,12 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
       try {
         console.log("\n--- Fetching Jira data ---");
         const ticketsWithJira = await prisma.ticket.findMany({
-          where: { jiraUrl: { not: null } },
+          where: {
+            AND: [
+              { jiraUrl: { not: null } },
+              { jiraUrl: { not: "" } },
+            ],
+          },
           select: { id: true, jiraUrl: true },
         });
 
@@ -317,7 +322,8 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
                     jiraAssignee: data.assigneeDisplayName,
                     jiraPriority: data.priorityName,
                     jiraStatusCategory: data.statusCategory,
-                    jiraLastUpdated: new Date(data.updated),
+                    jiraStatusCategoryKey: data.statusCategoryKey,
+                    jiraLastUpdated: Number.isNaN(new Date(data.updated).getTime()) ? null : new Date(data.updated),
                   },
                 });
                 jiraUpdated++;

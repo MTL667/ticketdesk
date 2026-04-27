@@ -25,6 +25,7 @@ interface TicketDetail {
   jiraUrl?: string;
   jiraPriority?: string;
   jiraStatusCategory?: string;
+  jiraStatusCategoryKey?: string;
   jiraLastUpdated?: string;
   attachments?: Array<{
     id: string;
@@ -433,19 +434,19 @@ export default function TicketDetailPage() {
               </dl>
             </div>
 
-            {/* Jira Integration */}
-            {(ticket.jiraStatus || ticket.jiraAssignee || ticket.jiraUrl) && (
+            {/* Jira Integration — only show when we have actual synced data */}
+            {(ticket.jiraStatus || ticket.jiraAssignee || ticket.jiraPriority) && (
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.53 2c-.55 0-1.08.22-1.47.61L2.61 10.1a2.08 2.08 0 000 2.93l7.45 7.49c.39.39.92.61 1.47.61s1.08-.22 1.47-.61l7.45-7.49a2.08 2.08 0 000-2.93L13 2.61A2.07 2.07 0 0011.53 2zm3.27 10.53l-3.2 3.2a.85.85 0 01-1.2 0l-1.6-1.6a.85.85 0 010-1.2.85.85 0 011.2 0l1 1 2.6-2.6a.85.85 0 011.2 0 .85.85 0 010 1.2z"/></svg>
-                    Jira
+                    {t("jiraSection")}
                   </h2>
-                  {ticket.jiraStatusCategory && (
+                  {ticket.jiraStatusCategoryKey && (
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      ticket.jiraStatusCategory.toLowerCase() === "done"
+                      ticket.jiraStatusCategoryKey === "done"
                         ? "bg-green-100 text-green-700"
-                        : ticket.jiraStatusCategory.toLowerCase() === "in progress"
+                        : ticket.jiraStatusCategoryKey === "indeterminate"
                           ? "bg-blue-100 text-blue-700"
                           : "bg-gray-100 text-gray-600"
                     }`}>
@@ -459,9 +460,9 @@ export default function TicketDetailPage() {
                       <dt className="text-sm font-medium text-gray-500">{t("jiraStatus")}</dt>
                       <dd className="mt-1">
                         <span className={`px-2 py-1 rounded text-sm font-medium ${
-                          ticket.jiraStatusCategory?.toLowerCase() === "done"
+                          ticket.jiraStatusCategoryKey === "done"
                             ? "bg-green-100 text-green-700"
-                            : ticket.jiraStatusCategory?.toLowerCase() === "in progress"
+                            : ticket.jiraStatusCategoryKey === "indeterminate"
                               ? "bg-purple-100 text-purple-700"
                               : "bg-gray-100 text-gray-700"
                         }`}>
@@ -485,7 +486,7 @@ export default function TicketDetailPage() {
                     </div>
                   )}
 
-                  {ticket.jiraLastUpdated && (
+                  {ticket.jiraLastUpdated && !Number.isNaN(new Date(ticket.jiraLastUpdated).getTime()) && (
                     <div>
                       <dt className="text-sm font-medium text-gray-500">{t("jiraLastUpdated")}</dt>
                       <dd className="mt-1 text-gray-900 text-sm">

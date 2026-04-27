@@ -29,7 +29,8 @@ model Ticket {
   jiraAssignee        String?
   jiraUrl             String?
   jiraPriority        String?
-  jiraStatusCategory  String?   // to-do, in-progress, done
+  jiraStatusCategory     String?   // display name: To Do, In Progress, Done
+  jiraStatusCategoryKey  String?   // locale-independent key: new, indeterminate, done
   jiraLastUpdated     DateTime?
   
   // Release notes
@@ -54,6 +55,7 @@ model Ticket {
   @@index([ticketId])
   @@index([syncedAt])
   @@index([releaseNotes])
+  @@index([jiraUrl])
 }
 
 // Ticket attachments from ClickUp

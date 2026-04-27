@@ -4,6 +4,7 @@ export interface JiraIssueData {
   key: string;
   statusName: string;
   statusCategory: string;
+  statusCategoryKey: string;
   assigneeDisplayName: string | null;
   priorityName: string | null;
   updated: string;
@@ -46,10 +47,10 @@ async function jiraFetch(url: string, init: RequestInit = {}, maxRetries = 3): P
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+    try {
       const response = await fetch(url, { ...init, signal: controller.signal });
       clearTimeout(timeoutId);
 
@@ -61,7 +62,7 @@ async function jiraFetch(url: string, init: RequestInit = {}, maxRetries = 3): P
         const retryAfter = parseInt(response.headers.get("retry-after") || "0", 10);
         const wait = retryAfter > 0 ? retryAfter * 1000 : Math.min(attempt * 2000, 10000);
         if (attempt < maxRetries) {
-          console.log(`[jira] 429 rate limit, waiting ${wait}ms (attempt ${attempt}/${maxRetries})`);
+          console.warn(`[jira] 429 rate limit, waiting ${wait}ms (attempt ${attempt}/${maxRetries})`);
           await new Promise((r) => setTimeout(r, wait));
           continue;
         }
@@ -71,7 +72,7 @@ async function jiraFetch(url: string, init: RequestInit = {}, maxRetries = 3): P
       if (response.status >= 500) {
         if (attempt < maxRetries) {
           const wait = Math.min(Math.pow(2, attempt) * 500, 5000);
-          console.log(`[jira] ${response.status} transient error, retry ${attempt}/${maxRetries} in ${wait}ms`);
+          console.warn(`[jira] ${response.status} transient error, retry ${attempt}/${maxRetries} in ${wait}ms`);
           await new Promise((r) => setTimeout(r, wait));
           continue;
         }
@@ -80,11 +81,12 @@ async function jiraFetch(url: string, init: RequestInit = {}, maxRetries = 3): P
 
       return response;
     } catch (error) {
+      clearTimeout(timeoutId);
       lastError = error;
       const isAbort = (error as Error).name === "AbortError";
       if (attempt < maxRetries) {
         const wait = Math.min(Math.pow(2, attempt) * 500, 5000);
-        console.log(
+        console.warn(
           `[jira] ${isAbort ? "timeout" : "network error"}: ${(error as Error).message}, retry ${attempt}/${maxRetries} in ${wait}ms`
         );
         await new Promise((r) => setTimeout(r, wait));
@@ -98,15 +100,20 @@ async function jiraFetch(url: string, init: RequestInit = {}, maxRetries = 3): P
     : new JiraError("Jira request failed after retries");
 }
 
-const JIRA_KEY_REGEX = /\/browse\/([A-Z][A-Z0-9]+-\d+)/;
+const JIRA_KEY_PATTERNS = [
+  /\/browse\/([A-Z][A-Z0-9]+-\d+)/i,
+  /\/issues\/([A-Z][A-Z0-9]+-\d+)/i,
+  /[?&]selectedIssue=([A-Z][A-Z0-9]+-\d+)/i,
+  /\b([A-Z][A-Z0-9]+-\d+)\s*$/i,
+];
 
 export function parseJiraKeyFromUrl(url: string): string | null {
-  const match = url.match(JIRA_KEY_REGEX);
-  if (!match) {
-    console.log(`[jira] Could not parse Jira key from URL: ${url}`);
-    return null;
+  for (const pattern of JIRA_KEY_PATTERNS) {
+    const match = url.match(pattern);
+    if (match) return match[1].toUpperCase();
   }
-  return match[1];
+  console.warn(`[jira] Could not parse Jira key from URL: ${url}`);
+  return null;
 }
 
 async function searchJiraBatch(
@@ -116,18 +123,18 @@ async function searchJiraBatch(
 ): Promise<JiraIssueData[]> {
   const jql = `key IN (${keys.join(",")})`;
   const results: JiraIssueData[] = [];
-  let startAt = 0;
-  const maxResults = 100;
+  let nextPageToken: string | undefined;
 
   while (true) {
-    const params = new URLSearchParams({
-      jql,
-      fields: JIRA_FIELDS,
-      startAt: String(startAt),
-      maxResults: String(maxResults),
-    });
+    const params = new URLSearchParams({ jql, maxResults: "100" });
+    for (const f of JIRA_FIELDS.split(",")) {
+      params.append("fields", f);
+    }
+    if (nextPageToken) {
+      params.set("nextPageToken", nextPageToken);
+    }
 
-    const response = await jiraFetch(`${baseUrl}/rest/api/3/search?${params}`, {
+    const response = await jiraFetch(`${baseUrl}/rest/api/3/search/jql?${params}`, {
       headers: {
         Authorization: authHeader,
         Accept: "application/json",
@@ -147,14 +154,15 @@ async function searchJiraBatch(
         key: issue.key,
         statusName: issue.fields?.status?.name || "Unknown",
         statusCategory: issue.fields?.status?.statusCategory?.name || "Unknown",
+        statusCategoryKey: issue.fields?.status?.statusCategory?.key || "undefined",
         assigneeDisplayName: issue.fields?.assignee?.displayName || null,
         priorityName: issue.fields?.priority?.name || null,
         updated: issue.fields?.updated || new Date().toISOString(),
       });
     }
 
-    if (startAt + issues.length >= (data.total || 0)) break;
-    startAt += issues.length;
+    if (issues.length === 0 || !data.nextPageToken) break;
+    nextPageToken = data.nextPageToken;
   }
 
   return results;

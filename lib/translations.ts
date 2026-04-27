@@ -90,6 +90,7 @@ export const translations = {
     
     // New ticket detail fields
     businessUnit: "Business Unit",
+    jiraSection: "Jira",
     jiraStatus: "Jira Status",
     jiraAssignee: "Jira Assignee",
     jiraUrl: "Jira Link",
@@ -195,6 +196,7 @@ export const translations = {
     
     // New ticket detail fields
     businessUnit: "Business Unit",
+    jiraSection: "Jira",
     jiraStatus: "Statut Jira",
     jiraAssignee: "Assigné Jira",
     jiraUrl: "Lien Jira",
@@ -300,6 +302,7 @@ export const translations = {
     
     // New ticket detail fields
     businessUnit: "Business Unit",
+    jiraSection: "Jira",
     jiraStatus: "Jira Status",
     jiraAssignee: "Jira Assignee",
     jiraUrl: "Jira Link",
