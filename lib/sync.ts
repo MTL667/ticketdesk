@@ -305,10 +305,34 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
         const uniqueKeys = Array.from(keyToTicketIds.keys());
         console.log(`Found ${uniqueKeys.length} Jira keys from ${ticketsWithJira.length} tickets`);
 
+        // Debug: check specific ticket
+        const debugTicketId = "86c9h1w4d";
+        const debugTicket = ticketsWithJira.find(t => t.id === debugTicketId);
+        if (debugTicket) {
+          const debugKey = parseJiraKeyFromUrl(debugTicket.jiraUrl!);
+          console.log(`[debug] Ticket ${debugTicketId}: jiraUrl="${debugTicket.jiraUrl}", parsedKey="${debugKey}"`);
+          if (debugKey) {
+            const mapped = keyToTicketIds.get(debugKey);
+            console.log(`[debug] Key ${debugKey} maps to tickets: ${JSON.stringify(mapped)}`);
+          }
+        } else {
+          console.log(`[debug] Ticket ${debugTicketId} NOT found in ticketsWithJira (${ticketsWithJira.length} total)`);
+        }
+
         if (uniqueKeys.length > 0) {
           const jiraData = await fetchJiraIssuesBulk(uniqueKeys);
 
+          // Debug: check if key exists in Jira response
+          if (debugTicket) {
+            const debugKey = parseJiraKeyFromUrl(debugTicket.jiraUrl!);
+            if (debugKey) {
+              const jiraResult = jiraData.get(debugKey);
+              console.log(`[debug] Jira data for ${debugKey}: ${jiraResult ? JSON.stringify(jiraResult) : "NOT FOUND"}`);
+            }
+          }
+
           let jiraUpdated = 0;
+          let jiraFailed = 0;
           for (const [key, data] of jiraData) {
             const ticketIds = keyToTicketIds.get(key) || [];
             for (const ticketId of ticketIds) {
@@ -326,11 +350,12 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
                 });
                 jiraUpdated++;
               } catch (e) {
+                jiraFailed++;
                 console.warn(`[jira] Failed to update ticket ${ticketId}: ${e instanceof Error ? e.message : String(e)}`);
               }
             }
           }
-          console.log(`✓ Updated ${jiraUpdated} tickets with Jira data`);
+          console.log(`✓ Updated ${jiraUpdated} tickets with Jira data${jiraFailed > 0 ? ` (${jiraFailed} failed)` : ""}`);
         }
       } catch (jiraError) {
         console.warn(`[jira] Jira enrichment failed (non-blocking): ${jiraError instanceof Error ? jiraError.message : String(jiraError)}`);
