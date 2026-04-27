@@ -93,6 +93,8 @@ export const translations = {
     jiraStatus: "Jira Status",
     jiraAssignee: "Jira Assignee",
     jiraUrl: "Jira Link",
+    jiraPriority: "Jira Prioriteit",
+    jiraLastUpdated: "Jira Laatst Bijgewerkt",
     openInJira: "Open in Jira",
     inDevelopment: "in ontwikkeling",
     
@@ -196,6 +198,8 @@ export const translations = {
     jiraStatus: "Statut Jira",
     jiraAssignee: "Assigné Jira",
     jiraUrl: "Lien Jira",
+    jiraPriority: "Priorité Jira",
+    jiraLastUpdated: "Dernière Mise à Jour Jira",
     openInJira: "Ouvrir dans Jira",
     inDevelopment: "en développement",
     
@@ -299,6 +303,8 @@ export const translations = {
     jiraStatus: "Jira Status",
     jiraAssignee: "Jira Assignee",
     jiraUrl: "Jira Link",
+    jiraPriority: "Jira Priority",
+    jiraLastUpdated: "Jira Last Updated",
     openInJira: "Open in Jira",
     inDevelopment: "in development",
     

@@ -1,4 +1,5 @@
 import prisma from "./prisma";
+import { isJiraConfigured, parseJiraKeyFromUrl, fetchJiraIssuesBulk } from "./jira";
 
 const CLICKUP_API_TOKEN = process.env.CLICKUP_API_TOKEN;
 const CLICKUP_LIST_IDS = process.env.CLICKUP_LIST_IDS;
@@ -276,6 +277,59 @@ export async function syncTicketsFromClickUp(): Promise<SyncResult> {
       });
       if (deleteResult.count > 0) {
         console.log(`🗑️ Removed ${deleteResult.count} tickets no longer in ClickUp`);
+      }
+    }
+
+    // Enrich tickets with Jira data (isolated — failures here never block sync)
+    if (isJiraConfigured()) {
+      try {
+        console.log("\n--- Fetching Jira data ---");
+        const ticketsWithJira = await prisma.ticket.findMany({
+          where: { jiraUrl: { not: null } },
+          select: { id: true, jiraUrl: true },
+        });
+
+        const keyToTicketIds = new Map<string, string[]>();
+        for (const t of ticketsWithJira) {
+          const key = parseJiraKeyFromUrl(t.jiraUrl!);
+          if (key) {
+            const ids = keyToTicketIds.get(key) || [];
+            ids.push(t.id);
+            keyToTicketIds.set(key, ids);
+          }
+        }
+
+        const uniqueKeys = Array.from(keyToTicketIds.keys());
+        console.log(`Found ${uniqueKeys.length} Jira keys from ${ticketsWithJira.length} tickets`);
+
+        if (uniqueKeys.length > 0) {
+          const jiraData = await fetchJiraIssuesBulk(uniqueKeys);
+
+          let jiraUpdated = 0;
+          for (const [key, data] of jiraData) {
+            const ticketIds = keyToTicketIds.get(key) || [];
+            for (const ticketId of ticketIds) {
+              try {
+                await prisma.ticket.update({
+                  where: { id: ticketId },
+                  data: {
+                    jiraStatus: data.statusName,
+                    jiraAssignee: data.assigneeDisplayName,
+                    jiraPriority: data.priorityName,
+                    jiraStatusCategory: data.statusCategory,
+                    jiraLastUpdated: new Date(data.updated),
+                  },
+                });
+                jiraUpdated++;
+              } catch (e) {
+                console.warn(`[jira] Failed to update ticket ${ticketId}: ${e instanceof Error ? e.message : String(e)}`);
+              }
+            }
+          }
+          console.log(`✓ Updated ${jiraUpdated} tickets with Jira data`);
+        }
+      } catch (jiraError) {
+        console.warn(`[jira] Jira enrichment failed (non-blocking): ${jiraError instanceof Error ? jiraError.message : String(jiraError)}`);
       }
     }
 
