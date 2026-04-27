@@ -118,8 +118,6 @@ function taskToTicket(task: any) {
     userEmail: email || "unknown@unknown.com",
     businessUnit: getCustomFieldByName(task.custom_fields, "business unit"),
     app: getCustomFieldById(task.custom_fields, APP_FIELD_ID),
-    jiraStatus: getCustomFieldByName(task.custom_fields, "jira status"),
-    jiraAssignee: getCustomFieldByName(task.custom_fields, "jira assignee"),
     jiraUrl: getCustomFieldByName(task.custom_fields, "jira url") || 
              getCustomFieldByName(task.custom_fields, "jira link"),
     releaseNotes: getBooleanCustomFieldById(task.custom_fields, RELEASE_NOTES_FIELD_ID),
