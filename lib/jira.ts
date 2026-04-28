@@ -1,4 +1,5 @@
 const JIRA_FIELDS = "status,assignee,priority,updated";
+const COMMENT_PAGE_SIZE = 50;
 
 export interface JiraIssueData {
   key: string;
@@ -251,4 +252,237 @@ export async function fetchJiraIssuesBulk(
   console.log(`[jira] Fetched ${fetched} issues from ${batches.length} batches (${failed} batches failed)`);
 
   return result;
+}
+
+// ─── Comment types ───
+
+export interface JiraComment {
+  id: string;
+  body: Record<string, unknown>;
+  created: string;
+  updated: string;
+  author: {
+    accountId: string;
+    emailAddress?: string;
+    displayName: string;
+    avatarUrls?: Record<string, string>;
+  };
+  isOwnComment?: boolean;
+}
+
+export function getServiceAccountEmail(): string {
+  return process.env.JIRA_EMAIL || "";
+}
+
+// ─── Comment CRUD ───
+
+export async function getIssueComments(issueKey: string): Promise<JiraComment[]> {
+  const { baseUrl, authHeader } = getJiraAuth();
+  const all: JiraComment[] = [];
+  let startAt = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      startAt: String(startAt),
+      maxResults: String(COMMENT_PAGE_SIZE),
+      orderBy: "created",
+    });
+
+    const response = await jiraFetch(
+      `${baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment?${params}`,
+      {
+        headers: {
+          Authorization: authHeader,
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new JiraError(`Failed to fetch comments for ${issueKey}: ${response.status} - ${text}`, response.status);
+    }
+
+    const data = await response.json();
+    const comments: JiraComment[] = (data.comments || []).map((c: Record<string, unknown>) => ({
+      id: c.id as string,
+      body: (c.body as Record<string, unknown>) || {},
+      created: c.created as string,
+      updated: c.updated as string,
+      author: c.author as JiraComment["author"],
+    }));
+
+    all.push(...comments);
+
+    if (startAt + comments.length >= (data.total || 0)) break;
+    startAt += comments.length;
+  }
+
+  all.sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+  return all;
+}
+
+export async function postIssueComment(
+  issueKey: string,
+  plainText: string,
+  authorName: string
+): Promise<JiraComment> {
+  const { baseUrl, authHeader } = getJiraAuth();
+  const prefixedText = `[${authorName}]: ${plainText}`;
+
+  const body = {
+    body: {
+      version: 1,
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: prefixedText }],
+        },
+      ],
+    },
+  };
+
+  const response = await jiraFetch(
+    `${baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new JiraError(`Failed to post comment on ${issueKey}: ${response.status} - ${text}`, response.status);
+  }
+
+  const data = await response.json();
+  const comment: JiraComment = {
+    id: data.id,
+    body: data.body || {},
+    created: data.created,
+    updated: data.updated,
+    author: data.author,
+    isOwnComment: true,
+  };
+
+  await setCommentProperty(comment.id, "source", "ticketdesk").catch((err) => {
+    console.warn(`[jira] Failed to set comment property on ${comment.id}: ${err instanceof Error ? err.message : String(err)}`);
+  });
+
+  return comment;
+}
+
+// ─── Comment properties ───
+
+async function setCommentProperty(
+  commentId: string,
+  key: string,
+  value: string,
+  retriesLeft = 2
+): Promise<void> {
+  const { baseUrl, authHeader } = getJiraAuth();
+
+  const response = await jiraFetch(
+    `${baseUrl}/rest/api/3/comment/${commentId}/properties/${encodeURIComponent(key)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ value }),
+    }
+  );
+
+  if (!response.ok && response.status !== 200 && response.status !== 201 && response.status !== 204) {
+    if (retriesLeft > 0) {
+      const backoff = (3 - retriesLeft) * 500;
+      await new Promise((r) => setTimeout(r, backoff));
+      return setCommentProperty(commentId, key, value, retriesLeft - 1);
+    }
+    const text = await response.text();
+    throw new JiraError(`Failed to set comment property ${key} on ${commentId}: ${response.status} - ${text}`, response.status);
+  }
+}
+
+export async function getCommentProperty(
+  commentId: string,
+  key: string
+): Promise<string | null> {
+  const { baseUrl, authHeader } = getJiraAuth();
+
+  const response = await jiraFetch(
+    `${baseUrl}/rest/api/3/comment/${commentId}/properties/${encodeURIComponent(key)}`,
+    {
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) return null;
+
+  try {
+    const data = await response.json();
+    return data.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function isOwnComment(comment: JiraComment, hasProperty: boolean): boolean {
+  if (hasProperty) return true;
+  const serviceEmail = getServiceAccountEmail().toLowerCase();
+  if (!serviceEmail) return false;
+  const authorEmail = (comment.author.emailAddress || "").toLowerCase();
+  if (authorEmail !== serviceEmail) return false;
+
+  const body = comment.body as { content?: Array<{ content?: Array<{ text?: string }> }> };
+  const firstText = body?.content?.[0]?.content?.[0]?.text || "";
+  return firstText.startsWith("[");
+}
+
+// ─── Attachments ───
+
+export async function uploadAttachment(
+  issueKey: string,
+  file: File
+): Promise<{ id: string; filename: string; mimeType: string; size: number }> {
+  const { baseUrl, authHeader } = getJiraAuth();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await jiraFetch(
+    `${baseUrl}/rest/api/3/issue/${encodeURIComponent(issueKey)}/attachments`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "X-Atlassian-Token": "no-check",
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new JiraError(`Failed to upload attachment to ${issueKey}: ${response.status} - ${text}`, response.status);
+  }
+
+  const data = await response.json();
+  const attachment = Array.isArray(data) ? data[0] : data;
+  return {
+    id: attachment.id,
+    filename: attachment.filename,
+    mimeType: attachment.mimeType,
+    size: attachment.size,
+  };
 }

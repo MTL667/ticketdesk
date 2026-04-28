@@ -99,6 +99,19 @@ export const translations = {
     openInJira: "Open in Jira",
     inDevelopment: "in ontwikkeling",
     
+    // Jira communication
+    developerMessages: "Ontwikkelaar",
+    previousConversations: "Eerdere gesprekken",
+    switchToDeveloper: "Naar ontwikkelaar",
+    switchToPrevious: "Naar eerdere gesprekken",
+    sendingFailed: "Verzenden mislukt",
+    retrying: "Opnieuw proberen...",
+    retry: "Opnieuw",
+    attachFile: "Bijlage toevoegen",
+    noJiraComments: "Nog geen berichten van ontwikkelaars.",
+    jiraMessagesHelp: "Stel een vraag over de ontwikkeling van dit ticket!",
+    unreadMessages: "ongelezen berichten",
+
     // Sync
     sync: "Sync",
     syncing: "Synchroniseren...",
@@ -205,6 +218,19 @@ export const translations = {
     openInJira: "Ouvrir dans Jira",
     inDevelopment: "en développement",
     
+    // Jira communication
+    developerMessages: "Développeur",
+    previousConversations: "Conversations précédentes",
+    switchToDeveloper: "Vers développeur",
+    switchToPrevious: "Vers conversations précédentes",
+    sendingFailed: "Échec de l'envoi",
+    retrying: "Nouvelle tentative...",
+    retry: "Réessayer",
+    attachFile: "Ajouter une pièce jointe",
+    noJiraComments: "Pas encore de messages des développeurs.",
+    jiraMessagesHelp: "Posez une question sur le développement de ce ticket !",
+    unreadMessages: "messages non lus",
+
     // Sync
     sync: "Sync",
     syncing: "Synchronisation...",
@@ -311,6 +337,19 @@ export const translations = {
     openInJira: "Open in Jira",
     inDevelopment: "in development",
     
+    // Jira communication
+    developerMessages: "Developer",
+    previousConversations: "Previous conversations",
+    switchToDeveloper: "Switch to developer",
+    switchToPrevious: "Switch to previous conversations",
+    sendingFailed: "Sending failed",
+    retrying: "Retrying...",
+    retry: "Retry",
+    attachFile: "Add attachment",
+    noJiraComments: "No developer messages yet.",
+    jiraMessagesHelp: "Ask a question about the development of this ticket!",
+    unreadMessages: "unread messages",
+
     // Sync
     sync: "Sync",
     syncing: "Syncing...",

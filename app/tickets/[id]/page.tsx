@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { redirect, useParams } from "next/navigation";
 import Link from "next/link";
-import { TicketComments } from "@/components/TicketComments";
+import { TicketCommunication } from "@/components/TicketCommunication";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 
@@ -373,7 +373,7 @@ export default function TicketDetailPage() {
             )}
 
             {/* Comments Section */}
-            <TicketComments ticketId={ticket.id} userEmail={session.user?.email || ""} />
+            <TicketCommunication ticketId={ticket.id} jiraUrl={ticket.jiraUrl || null} userEmail={session.user?.email || ""} userName={session.user?.email?.split("@")[0] || ""} />
           </div>
 
           {/* Sidebar - Ticket Details */}
