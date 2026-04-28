@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       await sendCommentNotification(
         ticket.userEmail,
         ticket.name,
-        ticket.ticketId || ticket.id,
+        ticket.id,
         `${authorName}: ${preview}`
       );
     } catch (err) {
