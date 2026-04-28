@@ -7,6 +7,7 @@ export default auth((req) => {
   // Public paths that don't require authentication
   const isPublicPath = 
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/webhooks/") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
     pathname === "/signin";
@@ -35,7 +36,7 @@ export const config = {
      * - favicon.ico
      * - public assets
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/auth|api/webhooks|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 
