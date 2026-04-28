@@ -49,15 +49,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "duplicate" }, { status: 200 });
     }
 
+    const serviceEmail = (process.env.JIRA_EMAIL || "").toLowerCase();
+    const authorEmail = (comment.author?.emailAddress || "").toLowerCase();
+    const authorAccountId = comment.author?.accountId || "";
+    const jiraAccountId = process.env.JIRA_ACCOUNT_ID || "";
+
+    if (serviceEmail && authorEmail && authorEmail === serviceEmail) {
+      return NextResponse.json({ ok: true, skipped: "own comment (email match)" }, { status: 200 });
+    }
+
+    if (jiraAccountId && authorAccountId && authorAccountId === jiraAccountId) {
+      return NextResponse.json({ ok: true, skipped: "own comment (accountId match)" }, { status: 200 });
+    }
+
     const commentBody = comment.body;
     if (commentBody) {
       const firstText = commentBody?.content?.[0]?.content?.[0]?.text || "";
-      if (firstText.startsWith("[")) {
-        const serviceEmail = (process.env.JIRA_EMAIL || "").toLowerCase();
-        const authorEmail = (comment.author?.emailAddress || "").toLowerCase();
-        if (serviceEmail && authorEmail === serviceEmail) {
-          return NextResponse.json({ ok: true, skipped: "own comment" }, { status: 200 });
-        }
+      if (firstText.startsWith("[") && firstText.includes("]: ")) {
+        return NextResponse.json({ ok: true, skipped: "own comment (prefix pattern)" }, { status: 200 });
       }
     }
 
