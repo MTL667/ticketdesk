@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { parseJiraKeyFromUrl } from "@/lib/jira";
 import { sendCommentNotification } from "@/lib/sendgrid";
-import { extractPlainText } from "@/lib/adf-renderer";
+import { extractPlainText } from "@/lib/adf-utils";
 
 const DEDUP_TTL_MS = 5 * 60 * 1000;
 const processedEvents = new Map<string, number>();

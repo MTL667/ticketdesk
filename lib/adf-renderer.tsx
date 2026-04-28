@@ -191,16 +191,4 @@ export function AdfRenderer({ document }: { document: AdfDocument | Record<strin
   return <div className="adf-content text-sm">{renderNode(doc as AdfNode, 0)}</div>;
 }
 
-export function extractPlainText(document: AdfDocument | Record<string, unknown>): string {
-  const doc = document as AdfDocument;
-  if (!doc || !doc.content) return "";
-
-  function extract(node: AdfNode): string {
-    if (node.type === "text") return node.text || "";
-    if (node.type === "hardBreak") return "\n";
-    if (!node.content) return "";
-    return node.content.map(extract).join("");
-  }
-
-  return doc.content.map((node) => extract(node as AdfNode)).join("\n").trim();
-}
+export { extractPlainText } from "./adf-utils";
