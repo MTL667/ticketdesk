@@ -11,10 +11,16 @@ import {
   JiraError,
   type JiraComment,
 } from "@/lib/jira";
+import { adfContainsMention } from "@/lib/adf-utils";
+
+function getServiceAccountId(): string {
+  return process.env.JIRA_ACCOUNT_ID || "";
+}
 
 async function classifyComments(comments: JiraComment[]) {
   const own: JiraComment[] = [];
   const received: JiraComment[] = [];
+  const serviceAccountId = getServiceAccountId();
 
   for (const comment of comments) {
     const prop = await getCommentProperty(comment.id, "source").catch(() => null);
@@ -22,7 +28,7 @@ async function classifyComments(comments: JiraComment[]) {
 
     if (isOwnComment(comment, hasProperty)) {
       own.push({ ...comment, isOwnComment: true });
-    } else {
+    } else if (adfContainsMention(comment.body, serviceAccountId)) {
       received.push({ ...comment, isOwnComment: false });
     }
   }

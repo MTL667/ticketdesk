@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { parseJiraKeyFromUrl } from "@/lib/jira";
 import { sendCommentNotification } from "@/lib/sendgrid";
-import { extractPlainText } from "@/lib/adf-utils";
+import { extractPlainText, adfContainsMention } from "@/lib/adf-utils";
 
 const DEDUP_TTL_MS = 5 * 60 * 1000;
 const processedEvents = new Map<string, number>();
@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
       if (firstText.startsWith("[") && firstText.includes("]: ")) {
         return NextResponse.json({ ok: true, skipped: "own comment (prefix pattern)" }, { status: 200 });
       }
+    }
+
+    if (jiraAccountId && commentBody && !adfContainsMention(commentBody, jiraAccountId)) {
+      return NextResponse.json({ ok: true, skipped: "service account not mentioned" }, { status: 200 });
     }
 
     const issueKey = payload.issue?.key;
