@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { parseJiraKeyFromUrl } from "@/lib/jira";
 import { sendCommentNotification } from "@/lib/sendgrid";
-import { extractPlainText, adfContainsMention, textContainsMention } from "@/lib/adf-utils";
+import { extractPlainText, adfContainsMention, textContainsMention, rawBodyContainsMention } from "@/lib/adf-utils";
 
 const DEDUP_TTL_MS = 5 * 60 * 1000;
 const processedEvents = new Map<string, number>();
@@ -92,9 +92,10 @@ export async function POST(request: NextRequest) {
     const serviceAccountName = process.env.JIRA_SERVICE_ACCOUNT_NAME || "servicedesk";
     const adfMention = commentBody && jiraAccountId && adfContainsMention(commentBody, jiraAccountId);
     const textMention = commentBody && textContainsMention(commentBody, serviceAccountName);
-    const isMentioned = adfMention || textMention;
+    const rawMention = jiraAccountId && rawBodyContainsMention(commentBody, jiraAccountId);
+    const isMentioned = adfMention || textMention || rawMention;
 
-    console.log("[jira-webhook] Mention check:", { serviceAccountName, adfMention, textMention, isMentioned });
+    console.log("[jira-webhook] Mention check:", { serviceAccountName, adfMention, textMention, rawMention, isMentioned });
 
     if (!isMentioned) {
       console.log("[jira-webhook] SKIP: service account not mentioned");

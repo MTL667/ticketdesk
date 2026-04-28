@@ -51,3 +51,15 @@ export function textContainsMention(
   const text = extractPlainText(document).toLowerCase();
   return text.includes(`@${mentionName.toLowerCase()}`);
 }
+
+export function rawBodyContainsMention(
+  body: unknown,
+  accountId: string
+): boolean {
+  if (!accountId) return false;
+  if (typeof body === "string") {
+    return body.includes(`[~accountid:${accountId}]`) || body.includes(accountId);
+  }
+  const str = JSON.stringify(body);
+  return str.includes(accountId);
+}
