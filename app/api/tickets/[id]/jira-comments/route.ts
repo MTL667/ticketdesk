@@ -11,7 +11,7 @@ import {
   JiraError,
   type JiraComment,
 } from "@/lib/jira";
-import { adfContainsMention } from "@/lib/adf-utils";
+import { adfContainsMention, textContainsMention } from "@/lib/adf-utils";
 
 function getServiceAccountId(): string {
   return process.env.JIRA_ACCOUNT_ID || "";
@@ -28,7 +28,10 @@ async function classifyComments(comments: JiraComment[]) {
 
     if (isOwnComment(comment, hasProperty)) {
       own.push({ ...comment, isOwnComment: true });
-    } else if (adfContainsMention(comment.body, serviceAccountId)) {
+    } else if (
+      adfContainsMention(comment.body, serviceAccountId)
+      || textContainsMention(comment.body, process.env.JIRA_SERVICE_ACCOUNT_NAME || "servicedesk")
+    ) {
       received.push({ ...comment, isOwnComment: false });
     }
   }

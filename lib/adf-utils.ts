@@ -33,10 +33,21 @@ export function adfContainsMention(
   if (!doc || !doc.content) return false;
 
   function hasMention(node: AdfNode): boolean {
-    if (node.type === "mention" && node.attrs?.id === accountId) return true;
+    if (node.type === "mention") {
+      if (node.attrs?.id === accountId || node.attrs?.accountId === accountId) return true;
+    }
     if (!node.content) return false;
     return node.content.some(hasMention);
   }
 
   return doc.content.some((node) => hasMention(node as AdfNode));
+}
+
+export function textContainsMention(
+  document: AdfDocument | Record<string, unknown>,
+  mentionName: string
+): boolean {
+  if (!mentionName) return false;
+  const text = extractPlainText(document).toLowerCase();
+  return text.includes(`@${mentionName.toLowerCase()}`);
 }

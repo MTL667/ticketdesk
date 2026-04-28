@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { parseJiraKeyFromUrl } from "@/lib/jira";
 import { sendCommentNotification } from "@/lib/sendgrid";
-import { extractPlainText, adfContainsMention } from "@/lib/adf-utils";
+import { extractPlainText, adfContainsMention, textContainsMention } from "@/lib/adf-utils";
 
 const DEDUP_TTL_MS = 5 * 60 * 1000;
 const processedEvents = new Map<string, number>();
@@ -70,7 +70,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (jiraAccountId && commentBody && !adfContainsMention(commentBody, jiraAccountId)) {
+    const serviceAccountName = process.env.JIRA_SERVICE_ACCOUNT_NAME || "servicedesk";
+    const isMentioned = (commentBody && jiraAccountId && adfContainsMention(commentBody, jiraAccountId))
+      || (commentBody && textContainsMention(commentBody, serviceAccountName));
+
+    if (!isMentioned) {
       return NextResponse.json({ ok: true, skipped: "service account not mentioned" }, { status: 200 });
     }
 
