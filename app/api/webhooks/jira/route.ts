@@ -7,6 +7,15 @@ import { extractPlainText, adfContainsMention, textContainsMention, rawBodyConta
 const DEDUP_TTL_MS = 5 * 60 * 1000;
 const processedEvents = new Map<string, number>();
 
+// Mask an email for log output: "kevin@hertbelgium.be" -> "k***@hertbelgium.be"
+function maskEmail(email: string | null | undefined): string {
+  if (!email) return "(none)";
+  const [local, domain] = email.split("@");
+  if (!domain) return "(invalid)";
+  const visible = local.slice(0, 1);
+  return `${visible}***@${domain}`;
+}
+
 function cleanupProcessedEvents() {
   const now = Date.now();
   for (const [key, timestamp] of processedEvents) {
@@ -106,8 +115,11 @@ export async function POST(request: NextRequest) {
 
     const issueKey = payload.issue?.key;
     if (!issueKey) {
+      console.log("[jira-webhook] SKIP: no issue key in payload");
       return NextResponse.json({ ok: true, skipped: "no issue key" }, { status: 200 });
     }
+
+    console.log("[jira-webhook] Looking up ticket for issueKey:", issueKey);
 
     const ticket = await prisma.ticket.findFirst({
       where: {
@@ -118,18 +130,43 @@ export async function POST(request: NextRequest) {
         name: true,
         ticketId: true,
         userEmail: true,
+        jiraUrl: true,
       },
     });
 
+    console.log("[jira-webhook] Ticket lookup result:", {
+      found: !!ticket,
+      ticketId: ticket?.ticketId,
+      hasUserEmail: !!ticket?.userEmail,
+      jiraUrl: ticket?.jiraUrl,
+    });
+
     if (!ticket || !ticket.userEmail) {
-      return NextResponse.json({ ok: true, skipped: "ticket not found" }, { status: 200 });
+      const reason = !ticket
+        ? `no ticket found with jiraUrl containing "${issueKey}"`
+        : "ticket has no userEmail";
+      console.log("[jira-webhook] SKIP:", reason);
+      return NextResponse.json({ ok: true, skipped: reason }, { status: 200 });
     }
 
-    const preview = commentBody
-      ? extractPlainText(commentBody).slice(0, 200)
-      : "New comment on your ticket";
+    let preview = "Nieuw bericht op uw ticket";
+    if (commentBody) {
+      try {
+        const extracted = extractPlainText(commentBody).slice(0, 200);
+        if (extracted) preview = extracted;
+      } catch (err) {
+        console.warn("[jira-webhook] extractPlainText failed, using fallback preview:", err);
+      }
+    }
 
     const authorName = comment.author?.displayName || "Developer";
+
+    console.log("[jira-webhook] Sending notification:", {
+      to: maskEmail(ticket.userEmail),
+      usingDefaultFrom: !process.env.SENDGRID_FROM_EMAIL,
+      ticketId: ticket.ticketId,
+      previewLength: preview.length,
+    });
 
     try {
       await sendCommentNotification(
@@ -138,6 +175,7 @@ export async function POST(request: NextRequest) {
         ticket.id,
         `${authorName}: ${preview}`
       );
+      console.log("[jira-webhook] Notification sent successfully to", maskEmail(ticket.userEmail));
     } catch (err) {
       console.error("[jira-webhook] SendGrid notification failed:", err);
     }

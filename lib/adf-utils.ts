@@ -10,7 +10,13 @@ interface AdfDocument {
   content: AdfNode[];
 }
 
-export function extractPlainText(document: AdfDocument | Record<string, unknown>): string {
+export function extractPlainText(document: AdfDocument | Record<string, unknown> | string): string {
+  // Jira webhooks can send the body as a wiki-markup string instead of ADF JSON.
+  // Strip [~accountid:...] mentions so the resulting preview is human-readable.
+  if (typeof document === "string") {
+    return document.replace(/\[~accountid:[^\]]+\]/g, "").replace(/\s+/g, " ").trim();
+  }
+
   const doc = document as AdfDocument;
   if (!doc || !doc.content) return "";
 
@@ -44,7 +50,7 @@ export function adfContainsMention(
 }
 
 export function textContainsMention(
-  document: AdfDocument | Record<string, unknown>,
+  document: AdfDocument | Record<string, unknown> | string,
   mentionName: string
 ): boolean {
   if (!mentionName) return false;
