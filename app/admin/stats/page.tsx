@@ -148,14 +148,17 @@ export default function AdminStatsPage() {
       const res = await fetch(`/api/admin/stats?view=${view}&period=${encodeURIComponent(period)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (!data?.current?.statuses || !Array.isArray(data.trend) || !Array.isArray(data.topCreators)) {
+        throw new Error("Invalid response shape");
+      }
       setStats(data);
     } catch (err) {
       console.error("Error fetching stats:", err);
-      setError(t("Statistieken laden mislukt", "Échec du chargement des statistiques", "Failed to load statistics"));
+      setError("fetch-error");
     } finally {
       setLoadingStats(false);
     }
-  }, [view, period, language]);
+  }, [view, period]);
 
   useEffect(() => {
     if (isAdminUser) fetchStats();
@@ -258,7 +261,7 @@ export default function AdminStatsPage() {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-700 text-sm">
-            {error}
+            {t("Statistieken laden mislukt", "Échec du chargement des statistiques", "Failed to load statistics")}
           </div>
         )}
 
@@ -506,7 +509,7 @@ function ComparisonTable({
             ))}
             {showYearTotal && (
               <th className="px-3 py-2 text-right font-semibold text-gray-700 uppercase bg-blue-50">
-                {t("Totaal", "Total", "Total")}
+                {t("Jaar Totaal", "Total Annuel", "Year Total")}
               </th>
             )}
           </tr>

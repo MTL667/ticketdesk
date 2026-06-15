@@ -19,14 +19,16 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim().toLowerCase() || "";
+    const statusParam = searchParams.get("status")?.trim() || "";
 
-    // Group by userEmail + status to build per-user status breakdown
+    const where: Record<string, unknown> = {};
+    if (search) where.userEmail = { contains: search, mode: "insensitive" };
+    if (statusParam) where.status = { equals: statusParam, mode: "insensitive" };
+
     const grouped = await prisma.ticket.groupBy({
       by: ["userEmail", "status"],
       _count: { _all: true },
-      where: search
-        ? { userEmail: { contains: search, mode: "insensitive" } }
-        : undefined,
+      where: Object.keys(where).length > 0 ? where : undefined,
     });
 
     const userMap = new Map<

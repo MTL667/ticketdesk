@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -76,13 +76,23 @@ function formatDate(iso: string | null): string {
   }
 }
 
-export default function AdminUsersPage() {
+export default function AdminUsersPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-pulse text-gray-500">Loading...</div></div>}>
+      <AdminUsersPage />
+    </Suspense>
+  );
+}
+
+function AdminUsersPage() {
   const { data: session, status } = useSession();
   const { language } = useLanguage();
+  const searchParams = useSearchParams();
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -146,7 +156,9 @@ export default function AdminUsersPage() {
       if (!data.isAdmin) {
         redirect("/");
       } else {
-        fetchUsers("");
+        const urlStatus = searchParams.get("status");
+        if (urlStatus) setStatusFilter(urlStatus);
+        fetchUsers("", urlStatus || undefined);
       }
     } catch {
       redirect("/");
@@ -155,12 +167,15 @@ export default function AdminUsersPage() {
     }
   };
 
-  const fetchUsers = async (query: string) => {
+  const fetchUsers = async (query: string, filterStatus?: string) => {
     setLoadingUsers(true);
     try {
-      const url = query
-        ? `/api/admin/users?search=${encodeURIComponent(query)}`
-        : `/api/admin/users`;
+      const params = new URLSearchParams();
+      if (query) params.set("search", query);
+      const activeFilter = filterStatus ?? statusFilter;
+      if (activeFilter) params.set("status", activeFilter);
+      const qs = params.toString();
+      const url = `/api/admin/users${qs ? `?${qs}` : ""}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -250,6 +265,23 @@ export default function AdminUsersPage() {
             "Look up a user by email, view their tickets and export as CSV."
           )}
         </p>
+
+        {statusFilter && (
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              {t("Gefilterd op status:", "Filtré par statut:", "Filtered by status:")}
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(statusFilter)}`}>
+              {statusFilter}
+            </span>
+            <button
+              onClick={() => { setStatusFilter(null); fetchUsers(search); }}
+              className="text-xs text-gray-400 hover:text-gray-700 ml-1"
+            >
+              ✕ {t("Filter wissen", "Effacer le filtre", "Clear filter")}
+            </button>
+          </div>
+        )}
 
         <div className={`grid grid-cols-1 gap-6 ${sidebarOpen ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
           {/* Left: search + list (collapsible) */}

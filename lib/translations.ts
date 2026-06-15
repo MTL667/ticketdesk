@@ -119,19 +119,6 @@ export const translations = {
     syncingTickets: "Tickets worden gesynchroniseerd met ClickUp...",
     synced: "Gesynchroniseerd",
     total: "totaal",
-
-    // Stats Dashboard
-    statsTitle: "Ticket Statistieken",
-    statsMonth: "Maand",
-    statsQuarter: "Kwartaal",
-    statsYear: "Jaar",
-    statsTotal: "Totaal",
-    statsTopCreators: "Top Ticket Aanmakers",
-    statsNoData: "Geen data",
-    statsChart: "Grafiek",
-    statsTable: "Tabel",
-    statsStatusDistribution: "Statusverdeling",
-    statsTrend: "Trend",
   },
   fr: {
     // Navigation
@@ -251,19 +238,6 @@ export const translations = {
     syncingTickets: "Synchronisation des tickets avec ClickUp...",
     synced: "Synchronisé",
     total: "total",
-
-    // Stats Dashboard
-    statsTitle: "Statistiques des tickets",
-    statsMonth: "Mois",
-    statsQuarter: "Trimestre",
-    statsYear: "Année",
-    statsTotal: "Total",
-    statsTopCreators: "Top créateurs de tickets",
-    statsNoData: "Pas de données",
-    statsChart: "Graphique",
-    statsTable: "Tableau",
-    statsStatusDistribution: "Répartition des statuts",
-    statsTrend: "Tendance",
   },
   en: {
     // Navigation
@@ -383,19 +357,6 @@ export const translations = {
     syncingTickets: "Syncing tickets with ClickUp...",
     synced: "Synced",
     total: "total",
-
-    // Stats Dashboard
-    statsTitle: "Ticket Statistics",
-    statsMonth: "Month",
-    statsQuarter: "Quarter",
-    statsYear: "Year",
-    statsTotal: "Total",
-    statsTopCreators: "Top Ticket Creators",
-    statsNoData: "No data",
-    statsChart: "Chart",
-    statsTable: "Table",
-    statsStatusDistribution: "Status Distribution",
-    statsTrend: "Trend",
   },
 } as const;
 

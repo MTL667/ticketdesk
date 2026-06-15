@@ -60,7 +60,8 @@ function getTrendRanges(view: View, period: string): { label: string; range: Dat
       const d = new Date(endYear, endMonth - i, 1);
       const y = d.getFullYear();
       const m = d.getMonth();
-      const label = `${y}-${String(m + 1).padStart(2, "0")}`;
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const label = `${monthNames[m]} ${y}`;
       ranges.push({ label, range: { gte: new Date(y, m, 1), lt: new Date(y, m + 1, 1) } });
     }
   }
@@ -116,6 +117,7 @@ async function getTopCreators(range: DateRange, limit = 10) {
   });
 
   return grouped
+    .filter((row) => row.userEmail)
     .map((row) => ({
       email: row.userEmail,
       name: row.userEmail.split("@")[0],
@@ -177,7 +179,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("[GET /api/admin/stats] Error:", error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Error fetching stats" },
+      { message: "Error fetching stats" },
       { status: 500 }
     );
   }

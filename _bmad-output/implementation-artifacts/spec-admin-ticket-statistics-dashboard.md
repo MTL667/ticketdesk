@@ -133,3 +133,20 @@ context: ['_bmad-output/project-context.md']
 
 - Translation keys added in nl/fr/en
   [`translations.ts:123`](../../lib/translations.ts#L123)
+
+### Review Findings
+
+- [x] [Review][Decision→Patch] Donut click-to-filter: added `status` URL param support to `/admin/users` page and API
+- [x] [Review][Decision→Patch] Removed unused `stats*` translation keys from `lib/translations.ts`
+- [x] [Review][Patch] Trend month labels now human-readable ("Jun 2026" instead of "2026-06")
+- [x] [Review][Patch] Year-view summary column header now says "Jaar Totaal/Year Total"
+- [x] [Review][Patch] API 500 response uses generic message instead of leaking `error.message`
+- [x] [Review][Patch] Removed `language` from `fetchStats` deps — error message translated at render time
+- [x] [Review][Patch] Added API response shape validation before setting state
+- [x] [Review][Patch] Added null `userEmail` guard in `getTopCreators`
+- [x] [Review][Defer] DB query amplification: month view runs 14 separate Prisma queries per request [route.ts:155-165] — deferred, optimization
+- [x] [Review][Defer] Stale data remains visible during period/view refetch without loading overlay [page.tsx:265] — deferred, UX polish
+- [x] [Review][Defer] Top creator display names derived from email local-part, no real name resolution [route.ts:121] — deferred, existing limitation
+- [x] [Review][Defer] No automated tests for date parsing, period shifting, or aggregation logic — deferred, out of scope
+- [x] [Review][Defer] No retry button on API error state [page.tsx:259] — deferred, UX enhancement
+- [x] [Review][Defer] Accessibility: unlabeled prev/next buttons, no keyboard navigation on charts [page.tsx:241] — deferred, admin-only desktop tool
