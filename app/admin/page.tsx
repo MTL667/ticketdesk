@@ -295,6 +295,12 @@ export default function AdminPage() {
           >
             📧 {language === "nl" ? "E-mail activiteit" : language === "fr" ? "Activité e-mail" : "Email activity"}
           </Link>
+          <Link
+            href="/admin/stats"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium text-gray-700"
+          >
+            📊 {language === "nl" ? "Ticket statistieken" : language === "fr" ? "Statistiques des tickets" : "Ticket statistics"}
+          </Link>
         </div>
 
         {/* Banner Settings */}
