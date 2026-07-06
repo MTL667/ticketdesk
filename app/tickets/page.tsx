@@ -348,6 +348,11 @@ export default function TicketsPage() {
           </div>
         )}
 
+        <div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 flex items-center gap-2">
+          <span className="text-gray-400 text-sm">ℹ️</span>
+          <p className="text-xs text-gray-500">{t("syncDelayInfo")}</p>
+        </div>
+
         <TicketList tickets={tickets} />
       </main>
     </div>

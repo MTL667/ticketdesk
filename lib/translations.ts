@@ -118,6 +118,7 @@ export const translations = {
     syncWithClickUp: "Synchroniseer met ClickUp",
     syncingTickets: "Tickets worden gesynchroniseerd met ClickUp...",
     synced: "Gesynchroniseerd",
+    syncDelayInfo: "Tickets worden elke 10 minuten gesynchroniseerd. Een nieuw aangemaakt ticket kan even duren voordat het hier verschijnt.",
     total: "totaal",
   },
   fr: {
@@ -237,6 +238,7 @@ export const translations = {
     syncWithClickUp: "Synchroniser avec ClickUp",
     syncingTickets: "Synchronisation des tickets avec ClickUp...",
     synced: "Synchronisé",
+    syncDelayInfo: "Les tickets sont synchronisés toutes les 10 minutes. Un ticket nouvellement créé peut prendre un moment avant d'apparaître ici.",
     total: "total",
   },
   en: {
@@ -356,6 +358,7 @@ export const translations = {
     syncWithClickUp: "Sync with ClickUp",
     syncingTickets: "Syncing tickets with ClickUp...",
     synced: "Synced",
+    syncDelayInfo: "Tickets are synchronized every 10 minutes. A newly created ticket may take a moment to appear here.",
     total: "total",
   },
 } as const;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getLastSyncStatus, syncTicketsFromClickUp, isSyncRunning } from "@/lib/sync";
+import { getLastSyncStatus } from "@/lib/sync";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,20 +29,7 @@ export async function GET(request: NextRequest) {
     // Get total count for metadata
     const totalTickets = await prisma.ticket.count();
 
-    // Get last sync info
     const lastSync = await getLastSyncStatus();
-    
-    // Auto-sync only once per hour (sync takes ~16 minutes for large lists)
-    const ONE_HOUR = 60 * 60 * 1000;
-    const shouldAutoSync = !lastSync || 
-      (lastSync.status === "completed" && lastSync.completedAt && 
-       new Date().getTime() - lastSync.completedAt.getTime() > ONE_HOUR);
-
-    if (shouldAutoSync && !(await isSyncRunning())) {
-      console.log("Auto-sync triggered (data older than 1 hour)");
-      // Trigger background sync (don't await)
-      syncTicketsFromClickUp().catch(console.error);
-    }
 
     // Map to API format
     const ticketsData = tickets.map((ticket) => ({
