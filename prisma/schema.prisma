@@ -120,10 +120,12 @@ enum LoanType {
 }
 
 enum LoanStatus {
+  PENDING
   ACTIVE
   RETURNED
   CANCELLED
   OVERDUE
+  REJECTED
 }
 
 model Entity {
@@ -175,6 +177,9 @@ model Loan {
   claimAcceptedAt DateTime?
   claimAcceptedBy String?
   createdByEmail  String
+  rejectionReason String?    @db.Text
+  reviewedAt      DateTime?
+  reviewedByEmail String?
   // Inventory loan fields
   borrower        String?
   event           String?

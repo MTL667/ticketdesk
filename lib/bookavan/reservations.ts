@@ -31,6 +31,9 @@ export function serializeReservation(loan: {
   claimAcceptedAt: Date | null;
   claimAcceptedBy: string | null;
   createdByEmail: string;
+  rejectionReason?: string | null;
+  reviewedAt?: Date | null;
+  reviewedByEmail?: string | null;
   createdAt: Date;
   entityId: string | null;
   entity?: { id: string; name: string } | null;
@@ -49,6 +52,9 @@ export function serializeReservation(loan: {
     claimAcceptedAt: loan.claimAcceptedAt?.toISOString() ?? null,
     claimAcceptedBy: loan.claimAcceptedBy,
     createdByEmail: loan.createdByEmail,
+    rejectionReason: loan.rejectionReason ?? null,
+    reviewedAt: loan.reviewedAt?.toISOString() ?? null,
+    reviewedByEmail: loan.reviewedByEmail ?? null,
     createdAt: loan.createdAt.toISOString(),
   };
 }
@@ -76,6 +82,11 @@ function serializeStatusSnippet(loan: {
     endAt: loan.endAt?.toISOString() ?? null,
   };
 }
+
+const BLOCKING_STATUSES: LoanStatus[] = [
+  LoanStatus.PENDING,
+  LoanStatus.ACTIVE,
+];
 
 export async function listReservations() {
   const bakwagen = await getBakwagenItem();
@@ -138,7 +149,7 @@ export async function createReservation(
     return tx.loan.create({
       data: {
         type: LoanType.RESERVATION,
-        status: LoanStatus.ACTIVE,
+        status: LoanStatus.PENDING,
         itemId: bakwagen.id,
         entityId: entity.id,
         driver: input.driver,
@@ -173,7 +184,7 @@ export async function getAvailability(from: Date, to: Date) {
     where: {
       itemId: bakwagen.id,
       type: LoanType.RESERVATION,
-      status: { not: LoanStatus.CANCELLED },
+      status: { in: BLOCKING_STATUSES },
       AND: [
         { endAt: { gt: now } },
         { startAt: { lt: to } },
@@ -188,7 +199,7 @@ export async function getAvailability(from: Date, to: Date) {
     where: {
       itemId: bakwagen.id,
       type: LoanType.RESERVATION,
-      status: { not: LoanStatus.CANCELLED },
+      status: { in: BLOCKING_STATUSES },
       startAt: { lte: now },
       endAt: { gt: now },
     },
@@ -200,7 +211,7 @@ export async function getAvailability(from: Date, to: Date) {
     where: {
       itemId: bakwagen.id,
       type: LoanType.RESERVATION,
-      status: { not: LoanStatus.CANCELLED },
+      status: { in: BLOCKING_STATUSES },
       startAt: { gt: now },
       endAt: { gt: now },
     },
@@ -237,8 +248,14 @@ export async function cancelReservation(
     throw new BookAVanError("Reservation is already cancelled", 400);
   }
 
-  if (loan.status !== LoanStatus.ACTIVE) {
-    throw new BookAVanError("Only active reservations can be cancelled", 400);
+  if (
+    loan.status !== LoanStatus.ACTIVE &&
+    loan.status !== LoanStatus.PENDING
+  ) {
+    throw new BookAVanError(
+      "Only pending or active reservations can be cancelled",
+      400
+    );
   }
 
   const isOwner =
@@ -251,7 +268,9 @@ export async function cancelReservation(
   }
 
   const now = new Date();
-  const hasStarted = Boolean(loan.startAt && loan.startAt.getTime() <= now.getTime());
+  const hasStarted = Boolean(
+    loan.startAt && loan.startAt.getTime() <= now.getTime()
+  );
   if (hasStarted && !canForceCancel) {
     throw new BookAVanError(
       "Started reservations can only be cancelled by marketing or admin",
@@ -260,7 +279,10 @@ export async function cancelReservation(
   }
 
   const result = await prisma.loan.updateMany({
-    where: { id: loan.id, status: LoanStatus.ACTIVE },
+    where: {
+      id: loan.id,
+      status: { in: [LoanStatus.ACTIVE, LoanStatus.PENDING] },
+    },
     data: { status: LoanStatus.CANCELLED },
   });
 

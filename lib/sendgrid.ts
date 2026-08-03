@@ -388,3 +388,136 @@ export async function sendCommentNotification(
     );
   }
 }
+
+// ─── BookAVan reservation emails ───
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+type BookAVanMailPayload = {
+  driver: string;
+  department: string;
+  destination: string;
+  reason: string;
+  startAt: string;
+  endAt: string;
+  requesterEmail: string;
+  rejectionReason?: string;
+};
+
+async function sendHtmlMail(
+  toEmails: string[],
+  subject: string,
+  html: string
+): Promise<void> {
+  if (toEmails.length === 0) return;
+  if (!isSendGridConfigured()) {
+    console.log("[sendgrid] SKIP BookAVan mail (SENDGRID_API_KEY unset):", subject);
+    return;
+  }
+
+  const apiKey = getApiKey();
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL || "servicedesk@spoq.be";
+  const fromName = process.env.SENDGRID_FROM_NAME || "ServiceDesk";
+
+  const response = await sgFetch(`${SENDGRID_API_BASE}/mail/send`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: toEmails.map((email) => ({ email })) }],
+      from: { email: fromEmail, name: fromName },
+      subject,
+      content: [{ type: "text/html", value: html }],
+    }),
+  });
+
+  if (!response.ok && response.status !== 202) {
+    const text = await response.text();
+    throw new SendGridError(
+      `SendGrid BookAVan mail failed: ${response.status} - ${text}`,
+      response.status
+    );
+  }
+}
+
+function bookavanDetailsHtml(payload: BookAVanMailPayload): string {
+  return `
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Bestuurder:</strong> ${escapeHtml(payload.driver)}</p>
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Afdeling:</strong> ${escapeHtml(payload.department)}</p>
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Bestemming:</strong> ${escapeHtml(payload.destination)}</p>
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Reden:</strong> ${escapeHtml(payload.reason)}</p>
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Periode:</strong> ${escapeHtml(payload.startAt)} → ${escapeHtml(payload.endAt)}</p>
+    <p style="color: #4a4a4a; font-size: 14px;"><strong>Aanvrager:</strong> ${escapeHtml(payload.requesterEmail)}</p>
+  `;
+}
+
+export async function sendBookAVanPendingNotification(
+  toEmails: string[],
+  payload: BookAVanMailPayload
+): Promise<void> {
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "";
+  const marketingUrl = baseUrl
+    ? `${baseUrl.replace(/\/+$/, "")}/marketing`
+    : "";
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a; font-size: 18px;">Nieuwe bakwagenaanvraag</h2>
+      <p style="color: #4a4a4a; font-size: 14px;">Er is een reservatie in afwachting van goedkeuring.</p>
+      ${bookavanDetailsHtml(payload)}
+      ${
+        marketingUrl
+          ? `<p style="margin-top: 20px;"><a href="${marketingUrl}" style="display: inline-block; background: #0d9488; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">Open inventaris</a></p>`
+          : ""
+      }
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">Dit is een automatisch bericht van BookAVan.</p>
+    </div>
+  `.trim();
+
+  await sendHtmlMail(toEmails, "BookAVan: nieuwe bakwagenaanvraag", html);
+}
+
+export async function sendBookAVanApprovedNotification(
+  toEmail: string,
+  payload: BookAVanMailPayload
+): Promise<void> {
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a; font-size: 18px;">Bakwagenreservatie goedgekeurd</h2>
+      <p style="color: #4a4a4a; font-size: 14px;">Je aanvraag is goedgekeurd.</p>
+      ${bookavanDetailsHtml(payload)}
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">Dit is een automatisch bericht van BookAVan.</p>
+    </div>
+  `.trim();
+
+  await sendHtmlMail([toEmail], "BookAVan: reservatie goedgekeurd", html);
+}
+
+export async function sendBookAVanRejectedNotification(
+  toEmail: string,
+  payload: BookAVanMailPayload
+): Promise<void> {
+  const reason = payload.rejectionReason || "";
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a; font-size: 18px;">Bakwagenreservatie afgewezen</h2>
+      <p style="color: #4a4a4a; font-size: 14px;">Je aanvraag is afgewezen.</p>
+      ${bookavanDetailsHtml(payload)}
+      <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+        <p style="color: #333; font-size: 14px; margin: 0; white-space: pre-wrap;"><strong>Reden:</strong> ${escapeHtml(reason)}</p>
+      </div>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">Dit is een automatisch bericht van BookAVan.</p>
+    </div>
+  `.trim();
+
+  await sendHtmlMail([toEmail], "BookAVan: reservatie afgewezen", html);
+}

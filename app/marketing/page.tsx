@@ -17,6 +17,10 @@ import {
   OpenLoansPanel,
   type OpenLoanRow,
 } from "@/components/marketing/OpenLoansPanel";
+import {
+  PendingReservationsPanel,
+  type PendingReservationRow,
+} from "@/components/marketing/PendingReservationsPanel";
 import { ReturnModal } from "@/components/marketing/ReturnModal";
 
 type EntityOption = { id: string; name: string };
@@ -56,9 +60,14 @@ export default function MarketingPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [openLoans, setOpenLoans] = useState<OpenLoanRow[]>([]);
+  const [pendingReservations, setPendingReservations] = useState<
+    PendingReservationRow[]
+  >([]);
   const [returnLoan, setReturnLoan] = useState<OpenLoanRow | null>(null);
   const [loanBusy, setLoanBusy] = useState(false);
   const [loanError, setLoanError] = useState<string | null>(null);
+  const [pendingBusyId, setPendingBusyId] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQ(q), 300);
@@ -79,16 +88,25 @@ export default function MarketingPage() {
       setLoading(true);
       setError(null);
       try {
-        const [response, loansRes] = await Promise.all([
+        const [response, loansRes, pendingRes] = await Promise.all([
           fetch(`/api/marketing/items${queryString}`, { signal }),
           fetch("/api/marketing/loans", { signal }),
+          fetch("/api/marketing/bookavan/pending", { signal }),
         ]);
         if (signal?.aborted) return;
-        if (response.status === 401 || loansRes.status === 401) {
+        if (
+          response.status === 401 ||
+          loansRes.status === 401 ||
+          pendingRes.status === 401
+        ) {
           router.push("/signin");
           return;
         }
-        if (response.status === 403 || loansRes.status === 403) {
+        if (
+          response.status === 403 ||
+          loansRes.status === 403 ||
+          pendingRes.status === 403
+        ) {
           setAllowed(false);
           return;
         }
@@ -118,6 +136,17 @@ export default function MarketingPage() {
         }
         const loansData = await loansRes.json();
         setOpenLoans(loansData.loans || []);
+        if (!pendingRes.ok) {
+          const pendingErr = await pendingRes.json().catch(() => ({}));
+          setPendingReservations([]);
+          setPendingError(
+            pendingErr.message || t("marketingPendingBookavanError")
+          );
+        } else {
+          const pendingData = await pendingRes.json();
+          setPendingReservations(pendingData.reservations || []);
+          setPendingError(null);
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(t("marketingLoadError"));
@@ -249,6 +278,48 @@ export default function MarketingPage() {
     }
   };
 
+  const handleApproveReservation = async (id: string) => {
+    setPendingBusyId(id);
+    setPendingError(null);
+    try {
+      const response = await fetch(`/api/marketing/bookavan/${id}/approve`, {
+        method: "POST",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setPendingError(data.message || t("marketingApproveError"));
+        return;
+      }
+      await loadItems();
+    } catch {
+      setPendingError(t("marketingApproveError"));
+    } finally {
+      setPendingBusyId(null);
+    }
+  };
+
+  const handleRejectReservation = async (id: string, reason: string) => {
+    setPendingBusyId(id);
+    setPendingError(null);
+    try {
+      const response = await fetch(`/api/marketing/bookavan/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setPendingError(data.message || t("marketingRejectError"));
+        return;
+      }
+      await loadItems();
+    } catch {
+      setPendingError(t("marketingRejectError"));
+    } finally {
+      setPendingBusyId(null);
+    }
+  };
+
   const handleReturn = async (payload: { loanId: string; quantity: number }) => {
     setLoanBusy(true);
     setLoanError(null);
@@ -374,6 +445,14 @@ export default function MarketingPage() {
         ) : (
           <ItemGrid items={items} onEdit={openEdit} />
         )}
+
+        <PendingReservationsPanel
+          reservations={pendingReservations}
+          busyId={pendingBusyId}
+          error={pendingError}
+          onApprove={handleApproveReservation}
+          onReject={handleRejectReservation}
+        />
 
         <OpenLoansPanel
           loans={openLoans}

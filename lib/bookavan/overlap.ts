@@ -10,7 +10,7 @@ export function rangesOverlap(
   return startA < endB && endA > startB;
 }
 
-/** Active, non-cancelled reservations that have not already ended. */
+/** Pending + active reservations that have not already ended. */
 export function blockingReservationWhere(
   itemId: string,
   startAt: Date,
@@ -21,7 +21,7 @@ export function blockingReservationWhere(
   return {
     itemId,
     type: LoanType.RESERVATION,
-    status: { not: LoanStatus.CANCELLED },
+    status: { in: [LoanStatus.PENDING, LoanStatus.ACTIVE] },
     AND: [
       { endAt: { gt: now } },
       { startAt: { lt: endAt } },

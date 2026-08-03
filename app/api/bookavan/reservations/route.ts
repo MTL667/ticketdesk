@@ -5,6 +5,7 @@ import {
   createReservation,
   listReservations,
 } from "@/lib/bookavan/reservations";
+import { notifyMarketingOfPendingReservation } from "@/lib/bookavan/notify";
 import { createReservationSchema } from "@/lib/validators/bookavan";
 
 export async function GET() {
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       parsed.data,
       session.user.email
     );
+    void notifyMarketingOfPendingReservation(reservation);
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {
     if (error instanceof BookAVanError) {

@@ -40,7 +40,8 @@ export function AvailabilityCalendar({
     const set = new Set<string>();
     const active = reservations.filter((r) => {
       if (!r.startAt || !r.endAt) return false;
-      if (r.status.toUpperCase() === "CANCELLED") return false;
+      const status = r.status.toUpperCase();
+      if (status !== "PENDING" && status !== "ACTIVE") return false;
       const start = new Date(r.startAt).getTime();
       const end = new Date(r.endAt).getTime();
       if (Number.isNaN(start) || Number.isNaN(end) || start > end) return false;

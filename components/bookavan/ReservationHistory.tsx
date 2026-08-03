@@ -2,6 +2,7 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatInBookingTimezone } from "@/lib/bookavan/datetime";
+import type { TranslationKey } from "@/lib/translations";
 
 export type ReservationRow = {
   id: string;
@@ -13,6 +14,7 @@ export type ReservationRow = {
   startAt: string | null;
   endAt: string | null;
   createdByEmail: string;
+  rejectionReason?: string | null;
 };
 
 type ReservationHistoryProps = {
@@ -32,6 +34,13 @@ function formatRange(startAt: string | null, endAt: string | null, locale: strin
   return `${formatInBookingTimezone(startAt, locale, opts)} → ${formatInBookingTimezone(endAt, locale, opts)}`;
 }
 
+const STATUS_KEYS: Record<string, TranslationKey> = {
+  PENDING: "bookavanStatusPending",
+  ACTIVE: "bookavanStatusActive",
+  CANCELLED: "bookavanStatusCancelled",
+  REJECTED: "bookavanStatusRejected",
+};
+
 export function ReservationHistory({
   reservations,
   currentUserEmail,
@@ -42,10 +51,15 @@ export function ReservationHistory({
   const { t, language } = useLanguage();
   const locale = language === "fr" ? "fr-BE" : language === "en" ? "en-GB" : "nl-BE";
 
-  const statusLabel = (status: string) => {
-    if (status === "ACTIVE") return t("bookavanStatusActive");
-    if (status === "CANCELLED") return t("bookavanStatusCancelled");
-    return status;
+  const statusLabel = (status: string) =>
+    t(STATUS_KEYS[status] || "bookavanStatusActive");
+
+  const statusClass = (status: string) => {
+    if (status === "ACTIVE") return "bg-emerald-50 text-emerald-800";
+    if (status === "PENDING") return "bg-amber-50 text-amber-900";
+    if (status === "REJECTED") return "bg-red-50 text-red-800";
+    if (status === "CANCELLED") return "bg-gray-100 text-gray-700";
+    return "bg-amber-50 text-amber-800";
   };
 
   return (
@@ -86,7 +100,7 @@ export function ReservationHistory({
                   row.startAt && new Date(row.startAt).getTime() <= Date.now()
                 );
                 const canCancel =
-                  row.status === "ACTIVE" &&
+                  (row.status === "ACTIVE" || row.status === "PENDING") &&
                   (canForceCancel || (isOwner && !hasStarted));
 
                 return (
@@ -97,23 +111,26 @@ export function ReservationHistory({
                     <td className="px-4 py-3">{row.driver || "—"}</td>
                     <td className="px-4 py-3">{row.department || "—"}</td>
                     <td className="px-4 py-3">{row.destination || "—"}</td>
-                    <td className="px-4 py-3">{row.reason || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div>{row.reason || "—"}</div>
+                      {row.status === "REJECTED" && row.rejectionReason ? (
+                        <p className="mt-1 text-xs text-red-700">
+                          {t("bookavanRejectionReason")}: {row.rejectionReason}
+                        </p>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          row.status === "ACTIVE"
-                            ? "bg-emerald-50 text-emerald-800"
-                            : row.status === "CANCELLED"
-                              ? "bg-gray-100 text-gray-700"
-                              : "bg-amber-50 text-amber-800"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${statusClass(row.status)}`}
                       >
                         <span aria-hidden>
                           {row.status === "ACTIVE"
                             ? "●"
                             : row.status === "CANCELLED"
                               ? "○"
-                              : "◆"}
+                              : row.status === "REJECTED"
+                                ? "✕"
+                                : "◆"}
                         </span>
                         {statusLabel(row.status)}
                       </span>
