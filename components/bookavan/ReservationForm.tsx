@@ -15,6 +15,9 @@ type ReservationFormProps = {
   availabilityMessage: string | null;
   availabilityOk: boolean | null;
   formResetKey?: number;
+  prefillStartAt?: string | null;
+  prefillEndAt?: string | null;
+  prefillKey?: number;
   onCheckAvailability: (from: string, to: string) => void;
   onSubmit: (payload: {
     driver: string;
@@ -35,6 +38,9 @@ export function ReservationForm({
   availabilityMessage,
   availabilityOk,
   formResetKey = 0,
+  prefillStartAt = null,
+  prefillEndAt = null,
+  prefillKey = 0,
   onCheckAvailability,
   onSubmit,
 }: ReservationFormProps) {
@@ -69,6 +75,13 @@ export function ReservationForm({
       setEntityId(entities[0].id);
     }
   }, [formResetKey, entities]);
+
+  useEffect(() => {
+    if (prefillKey === 0 || !prefillStartAt || !prefillEndAt) return;
+    setStartAt(prefillStartAt);
+    setEndAt(prefillEndAt);
+    setClientError(null);
+  }, [prefillKey, prefillStartAt, prefillEndAt]);
 
   useEffect(() => {
     if (!entityId && entities.length > 0) {

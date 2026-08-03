@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { AvailabilityCalendar } from "@/components/bookavan/AvailabilityCalendar";
 import { ReservationForm } from "@/components/bookavan/ReservationForm";
 import { RulesPanel } from "@/components/bookavan/RulesPanel";
 import { VehicleStatusCard } from "@/components/bookavan/VehicleStatusCard";
@@ -48,7 +49,20 @@ export default function BookAVanPage() {
   const [canForceCancel, setCanForceCancel] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formResetKey, setFormResetKey] = useState(0);
+  const [prefillStartAt, setPrefillStartAt] = useState<string | null>(null);
+  const [prefillEndAt, setPrefillEndAt] = useState<string | null>(null);
+  const [prefillKey, setPrefillKey] = useState(0);
   const availabilityAbortRef = useRef<AbortController | null>(null);
+  const formSectionRef = useRef<HTMLDivElement>(null);
+  const focusTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (focusTimeoutRef.current !== null) {
+        window.clearTimeout(focusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const refreshVehicleSnapshot = useCallback(async () => {
     const from = new Date();
@@ -260,7 +274,33 @@ export default function BookAVanPage() {
           <p className="mt-2 text-gray-600 max-w-2xl">{t("bookavanIntro")}</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)] items-start">
+        <AvailabilityCalendar
+          reservations={reservations}
+          loading={loading}
+          onSelectDay={(startAt, endAt) => {
+            setPrefillStartAt(startAt);
+            setPrefillEndAt(endAt);
+            setPrefillKey((k) => k + 1);
+            setAvailabilityMessage(null);
+            setAvailabilityOk(null);
+            formSectionRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+            if (focusTimeoutRef.current !== null) {
+              window.clearTimeout(focusTimeoutRef.current);
+            }
+            focusTimeoutRef.current = window.setTimeout(() => {
+              document.getElementById("bookavan-start")?.focus();
+              focusTimeoutRef.current = null;
+            }, 200);
+          }}
+        />
+
+        <div
+          ref={formSectionRef}
+          className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)] items-start"
+        >
           <ReservationForm
             entities={entities}
             submitting={submitting}
@@ -268,6 +308,9 @@ export default function BookAVanPage() {
             availabilityMessage={availabilityMessage}
             availabilityOk={availabilityOk}
             formResetKey={formResetKey}
+            prefillStartAt={prefillStartAt}
+            prefillEndAt={prefillEndAt}
+            prefillKey={prefillKey}
             onCheckAvailability={onCheckAvailability}
             onSubmit={handleSubmit}
           />

@@ -51,8 +51,13 @@ Pre-existing issues surfaced during adversarial review but not in scope of the c
 
 ## Deferred from: quick-dev split (2026-08-03)
 
-- **BookAVan availability calendar** — show available/unavailable periods on `/bookavan` for immediate visibility. Split from home-tile removal; implement as a follow-up quick-dev.
+- ~~**BookAVan availability calendar**~~ — implemented in `spec-bookavan-availability-calendar.md`.
 - **Story doc drift (1.4 / 2.1 home cards)** — epic story files still mention home cards; update when calendar/nav story lands.
+
+## Deferred from: code review of bookavan-availability-calendar (2026-08-03)
+
+- **Disable past calendar days** — not required by approved ACs; users can still prefill historical dates.
+- **Full ARIA grid keyboard navigation** — days are focusable buttons; arrow-key grid pattern later.
 
 ## Deferred from: code review of epic-4 (2026-08-03)
 
