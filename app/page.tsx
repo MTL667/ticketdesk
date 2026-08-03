@@ -168,38 +168,6 @@ export default function Home() {
           </Link>
 
           <Link
-            href="/bookavan"
-            className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[var(--spoq-teal)]"
-          >
-            <div className="text-center">
-              <div className="text-4xl mb-4">🚚</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {t("bookavanHomeCard")}
-              </h3>
-              <p className="text-gray-600">
-                {t("bookavanHomeDescription")}
-              </p>
-            </div>
-          </Link>
-
-          {isMarketingUser && (
-            <Link
-              href="/marketing"
-              className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[var(--spoq-teal)]"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-4">🏷️</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {t("marketingHomeCard")}
-                </h3>
-                <p className="text-gray-600">
-                  {t("marketingHomeDescription")}
-                </p>
-              </div>
-            </Link>
-          )}
-
-          <Link
             href="/releases"
             className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-purple-500"
           >

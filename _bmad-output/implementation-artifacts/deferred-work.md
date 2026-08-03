@@ -49,6 +49,11 @@ Pre-existing issues surfaced during adversarial review but not in scope of the c
 - **Automated tests for loan concurrency/overdue** — not required by Epic 3 ACs.
 - **Strict available === total − openLoans on manual edit** — ceiling vs open loans already enforced; free downward adjustment allowed.
 
+## Deferred from: quick-dev split (2026-08-03)
+
+- **BookAVan availability calendar** — show available/unavailable periods on `/bookavan` for immediate visibility. Split from home-tile removal; implement as a follow-up quick-dev.
+- **Story doc drift (1.4 / 2.1 home cards)** — epic story files still mention home cards; update when calendar/nav story lands.
+
 ## Deferred from: code review of epic-4 (2026-08-03)
 
 - **Photo delete API/UI** — upload + primary selection only in Epic 4 ACs; delete later.

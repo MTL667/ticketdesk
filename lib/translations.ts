@@ -123,8 +123,6 @@ export const translations = {
 
     // BookAVan
     bookavanTitle: "BookAVan",
-    bookavanHomeCard: "BookAVan",
-    bookavanHomeDescription: "Reserveer de bedrijfsbakwagen",
     bookavanHeading: "Bakwagen reserveren",
     bookavanIntro: "Plan een rit, bekijk beschikbaarheid en accepteer de schade- en boetevoorwaarden voor vertrek.",
     bookavanLoading: "BookAVan laden...",
@@ -185,8 +183,6 @@ export const translations = {
     // Marketing Inventaris
     marketingNav: "Inventaris",
     marketingTitle: "Marketing Inventaris",
-    marketingHomeCard: "Marketing Inventaris",
-    marketingHomeDescription: "Beheer materialen, stock en uitleningen",
     marketingHeading: "Inventaris overzicht",
     marketingIntro: "Bekijk stockstatus, filter materialen en beheer items voor marketingactiviteiten.",
     marketingLoading: "Inventaris laden...",
@@ -404,8 +400,6 @@ export const translations = {
 
     // BookAVan
     bookavanTitle: "BookAVan",
-    bookavanHomeCard: "BookAVan",
-    bookavanHomeDescription: "Réservez le camion de l'entreprise",
     bookavanHeading: "Réserver le camion",
     bookavanIntro: "Planifiez un trajet, vérifiez la disponibilité et acceptez les conditions de dommages et d'amendes avant le départ.",
     bookavanLoading: "Chargement de BookAVan...",
@@ -466,8 +460,6 @@ export const translations = {
     // Marketing Inventaris
     marketingNav: "Inventaire",
     marketingTitle: "Inventaire Marketing",
-    marketingHomeCard: "Inventaire Marketing",
-    marketingHomeDescription: "Gérez le matériel, les stocks et les prêts",
     marketingHeading: "Aperçu de l'inventaire",
     marketingIntro: "Consultez le stock, filtrez le matériel et gérez les articles marketing.",
     marketingLoading: "Chargement de l'inventaire...",
@@ -685,8 +677,6 @@ export const translations = {
 
     // BookAVan
     bookavanTitle: "BookAVan",
-    bookavanHomeCard: "BookAVan",
-    bookavanHomeDescription: "Reserve the company van",
     bookavanHeading: "Reserve the van",
     bookavanIntro: "Plan a trip, check availability, and accept damage and fine terms before departure.",
     bookavanLoading: "Loading BookAVan...",
@@ -747,8 +737,6 @@ export const translations = {
     // Marketing Inventaris
     marketingNav: "Inventory",
     marketingTitle: "Marketing Inventory",
-    marketingHomeCard: "Marketing Inventory",
-    marketingHomeDescription: "Manage materials, stock, and loans",
     marketingHeading: "Inventory overview",
     marketingIntro: "View stock health, filter materials, and manage marketing items.",
     marketingLoading: "Loading inventory...",
