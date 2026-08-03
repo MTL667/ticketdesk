@@ -14,6 +14,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [banner, setBanner] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMarketingUser, setIsMarketingUser] = useState(false);
 
   useEffect(() => {
     if (status !== "loading") {
@@ -22,6 +23,7 @@ export default function Home() {
     if (status === "authenticated") {
       fetchBanner();
       checkAdmin();
+      checkMarketing();
     }
   }, [status]);
 
@@ -46,6 +48,18 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error checking admin:", error);
+    }
+  };
+
+  const checkMarketing = async () => {
+    try {
+      const response = await fetch("/api/marketing/check");
+      if (response.ok) {
+        const data = await response.json();
+        setIsMarketingUser(Boolean(data.isMarketing));
+      }
+    } catch (error) {
+      console.error("Error checking marketing:", error);
     }
   };
 
@@ -82,6 +96,15 @@ export default function Home() {
                   Admin
                 </Link>
               )}
+              {isMarketingUser && (
+                <Link
+                  href="/marketing"
+                  className="text-xs px-2 py-1 rounded font-medium text-white"
+                  style={{ background: "var(--spoq-teal)" }}
+                >
+                  {t("marketingNav")}
+                </Link>
+              )}
               <LanguageSelector />
               <span className="text-sm text-gray-600">{session.user?.email}</span>
               <Link
@@ -116,7 +139,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           <Link
             href="/tickets/new"
             className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-blue-500"
@@ -143,6 +166,38 @@ export default function Home() {
               </p>
             </div>
           </Link>
+
+          <Link
+            href="/bookavan"
+            className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[var(--spoq-teal)]"
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-4">🚚</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                {t("bookavanHomeCard")}
+              </h3>
+              <p className="text-gray-600">
+                {t("bookavanHomeDescription")}
+              </p>
+            </div>
+          </Link>
+
+          {isMarketingUser && (
+            <Link
+              href="/marketing"
+              className="bg-white rounded-lg shadow-md p-8 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[var(--spoq-teal)]"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-4">🏷️</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {t("marketingHomeCard")}
+                </h3>
+                <p className="text-gray-600">
+                  {t("marketingHomeDescription")}
+                </p>
+              </div>
+            </Link>
+          )}
 
           <Link
             href="/releases"

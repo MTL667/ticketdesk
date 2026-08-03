@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --spoq-navy: #082f3d;
+  --spoq-navy-2: #0b4558;
+  --spoq-teal: #16839d;
+  --spoq-teal-2: #0d6f87;
+  --spoq-aqua: #4bb5c7;
+  --spoq-soft: #e9f5f7;
+  --spoq-line: #dce6e9;
+  --spoq-muted: #687d86;
+}
+
 body {
   @apply bg-gray-50 text-gray-900;
 }

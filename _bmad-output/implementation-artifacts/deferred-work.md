@@ -28,3 +28,34 @@ Pre-existing issues surfaced during adversarial review but not in scope of the c
 - **No automated tests**. Date parsing, period shifting, trend range generation, and aggregation logic have no unit or integration tests.
 - **No retry UX on error** (`page.tsx:259`). Error banner is static with no retry button; user must manually refresh.
 - **Accessibility gaps** (`page.tsx:241`). Prev/next navigation buttons use unlabeled Unicode glyphs; chart segments lack keyboard navigation. Acceptable for admin-only desktop tool.
+
+## Deferred from: code review of epic-1 (2026-08-03)
+
+- **No DB check constraints for inventory qty invariants** (`prisma/schema.prisma`). `available > total`, negative stock, non-positive loan quantity not enforced at DB level — Epic 2/3 inventory scope.
+- **No automated tests for BookAVan overlap/cancel/auth/timezone**. Not required by Epic 1 ACs; add when TEA/test stories cover the module.
+
+## Deferred from: code review of epic-2 (2026-08-03)
+
+- **Optimistic concurrency on item update** — no `updatedAt` precondition; last write wins until multi-editor concurrency becomes an issue.
+- **KPI reconciliation vs loan rows** — displayed loaned = total − available; Epic 3 checkout/return should keep this consistent.
+- **Full loan-history pagination** — detail currently caps at 50; truncation note is MVP; full paging later.
+- **Automated tests for marketing CRUD/auth** — not required by Epic 2 ACs.
+
+## Deferred from: code review of epic-3 (2026-08-03)
+
+- **Partial-return audit trail** — partial returns reduce loan quantity in place; no separate return event rows. FR27 allows partial qty; richer audit later.
+- **Checkout idempotency keys** — UI disables submit while busy; API-level keys if duplicate POSTs become a problem.
+- **Item list truncation UX (>200)** — carried from Epic 2; metadata exists, UI paging later.
+- **Automated tests for loan concurrency/overdue** — not required by Epic 3 ACs.
+- **Strict available === total − openLoans on manual edit** — ceiling vs open loans already enforced; free downward adjustment allowed.
+
+## Deferred from: code review of epic-4 (2026-08-03)
+
+- **Photo delete API/UI** — upload + primary selection only in Epic 4 ACs; delete later.
+- **Server-side thumbnail resize** — architecture nice-to-have; full images used for thumbs for now.
+- **Automated tests for storage/upload** — no test runner in repo; same stance as Epics 1–3.
+- **Deep content-type validation** — MIME/extension allowlist only; magic-byte sniffing later if needed.
+- **DB unique constraint for single primary** — app-level multi-primary repair exists; schema constraint later.
+- **Orphan S3 reconciliation** — best-effort delete after failed DB create; no background sweeper.
+- **Stale absolute photo URLs** — URL baked at upload from `S3_PUBLIC_URL`; rotation needs rebuild path.
+- **Private-bucket ACL / SSE options** — assumes publicly readable objects via `S3_PUBLIC_URL`.

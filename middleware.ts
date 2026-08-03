@@ -5,7 +5,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   
   // Public paths that don't require authentication
-  const isPublicPath = 
+  const isPublicPath =
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhooks/") ||
     pathname === "/api/sync/cron" ||
@@ -13,7 +13,12 @@ export default auth((req) => {
     pathname === "/favicon.ico" ||
     pathname === "/signin";
 
-  if (isPublicPath) {
+  // JSON APIs return 401 from route guards instead of a browser redirect
+  const isJsonAuthApi =
+    pathname.startsWith("/api/marketing") ||
+    pathname.startsWith("/api/bookavan");
+
+  if (isPublicPath || isJsonAuthApi) {
     return NextResponse.next();
   }
 
