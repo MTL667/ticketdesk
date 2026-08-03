@@ -1,7 +1,10 @@
 import { randomUUID } from "crypto";
 import prisma from "@/lib/prisma";
 import { MarketingError } from "@/lib/marketing/items";
+import { photoProxyUrl } from "@/lib/marketing/photo-url";
 import { deleteObject, StorageError, uploadObject } from "@/lib/storage";
+
+export { photoProxyUrl };
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -34,7 +37,6 @@ export class PhotoBatchError extends Error {
 export function serializePhoto(photo: {
   id: string;
   itemId: string;
-  url: string;
   isPrimary: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -42,7 +44,7 @@ export function serializePhoto(photo: {
   return {
     id: photo.id,
     itemId: photo.itemId,
-    url: photo.url,
+    url: photoProxyUrl(photo.itemId, photo.id),
     isPrimary: photo.isPrimary,
     sortOrder: photo.sortOrder,
     createdAt: photo.createdAt.toISOString(),

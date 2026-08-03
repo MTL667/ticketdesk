@@ -1,10 +1,13 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 
 const S3_TIMEOUT_MS = 30_000;
+const MAX_GET_BYTES = 10 * 1024 * 1024;
+const MARKETING_PHOTO_KEY_PREFIX = "marketing/items/";
 
 export class StorageError extends Error {
   status: number;
@@ -40,7 +43,7 @@ export function getStorageConfig(): StorageConfig {
     bucket: requireEnv("S3_BUCKET"),
     accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
     secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
-    publicUrl: requireEnv("S3_PUBLIC_URL").replace(/\/$/, ""),
+    publicUrl: (process.env.S3_PUBLIC_URL?.trim() || "").replace(/\/$/, ""),
   };
 }
 
@@ -79,6 +82,8 @@ function getClient(): { client: S3Client; config: StorageConfig } {
 export function publicUrlForKey(key: string): string {
   const { publicUrl } = getStorageConfig();
   const normalized = key.replace(/^\//, "");
+  // Legacy bookkeeping column; gallery display uses authenticated proxy URLs.
+  if (!publicUrl) return `s3://${normalized}`;
   return `${publicUrl}/${normalized}`;
 }
 
@@ -123,5 +128,68 @@ export async function deleteObject(key: string): Promise<void> {
   } catch (error) {
     console.error("S3 delete failed:", error);
     throw new StorageError("Failed to delete object from storage", 502);
+  }
+}
+
+export async function getObject(key: string): Promise<{
+  body: Buffer;
+  contentType: string;
+}> {
+  const { client: s3, config } = getClient();
+  const normalized = key.replace(/^\//, "").trim();
+
+  if (!normalized || !normalized.startsWith(MARKETING_PHOTO_KEY_PREFIX)) {
+    throw new StorageError("Object not found in storage", 404);
+  }
+
+  try {
+    const response = await s3.send(
+      new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: normalized,
+      }),
+      { abortSignal: AbortSignal.timeout(S3_TIMEOUT_MS) }
+    );
+
+    if (!response.Body) {
+      throw new StorageError("Empty object body from storage", 502);
+    }
+
+    if (
+      typeof response.ContentLength === "number" &&
+      response.ContentLength > MAX_GET_BYTES
+    ) {
+      throw new StorageError("Object too large to fetch", 502);
+    }
+
+    const bytes = Buffer.from(await response.Body.transformToByteArray());
+    if (bytes.length > MAX_GET_BYTES) {
+      throw new StorageError("Object too large to fetch", 502);
+    }
+
+    return {
+      body: bytes,
+      contentType: response.ContentType || "application/octet-stream",
+    };
+  } catch (error) {
+    if (error instanceof StorageError) throw error;
+    const name =
+      error && typeof error === "object" && "name" in error
+        ? String((error as { name: unknown }).name)
+        : "";
+    const statusCode =
+      error && typeof error === "object" && "$metadata" in error
+        ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+            ?.httpStatusCode
+        : undefined;
+    if (
+      name === "NoSuchKey" ||
+      name === "NotFound" ||
+      statusCode === 404
+    ) {
+      throw new StorageError("Object not found in storage", 404);
+    }
+    console.error("S3 get failed:", error);
+    throw new StorageError("Failed to fetch object from storage", 502);
   }
 }

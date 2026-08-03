@@ -68,4 +68,11 @@ Pre-existing issues surfaced during adversarial review but not in scope of the c
 - **DB unique constraint for single primary** — app-level multi-primary repair exists; schema constraint later.
 - **Orphan S3 reconciliation** — best-effort delete after failed DB create; no background sweeper.
 - **Stale absolute photo URLs** — URL baked at upload from `S3_PUBLIC_URL`; rotation needs rebuild path.
-- **Private-bucket ACL / SSE options** — assumes publicly readable objects via `S3_PUBLIC_URL`.
+- **Private-bucket ACL / SSE options** — assumes publicly readable objects via `S3_PUBLIC_URL`. *(Superseded for inventaris gallery by spec-marketing-private-photo-access authenticated proxy; upload still may write legacy public-style `url` column.)*
+
+## Deferred from: code review of spec-marketing-private-photo-access (2026-08-03)
+
+- **True streaming GetObject** — proxy still buffers full object in memory (capped at 10MB); stream to response if large-file support expands.
+- **Conditional GET / ETag** — `Cache-Control: private, max-age=300` only; no ETag/Last-Modified yet.
+- **Migrate legacy `ItemPhoto.url` values** — display ignores them; column still filled on upload for bookkeeping.
+- **Content-Type allowlist on proxy response** — `nosniff` added; non-image Content-Type from S3 not rewritten.

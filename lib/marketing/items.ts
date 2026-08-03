@@ -1,6 +1,7 @@
 import { LoanStatus, LoanType, Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { BAKWAGEN_SLUG } from "@/lib/bookavan/bakwagen";
+import { photoProxyUrl } from "@/lib/marketing/photo-url";
 import type { ItemCreateInput, ItemUpdateInput } from "@/lib/validators/marketing";
 
 const LIST_LIMIT = 200;
@@ -214,7 +215,7 @@ export async function getItem(id: string) {
     photos: photos.map((photo) => ({
       id: photo.id,
       itemId: photo.itemId,
-      url: photo.url,
+      url: photoProxyUrl(photo.itemId, photo.id),
       isPrimary: photo.isPrimary,
       sortOrder: photo.sortOrder,
       createdAt: photo.createdAt.toISOString(),
