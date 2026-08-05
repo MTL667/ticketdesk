@@ -20,6 +20,10 @@
 .DS_Store
 *.pem
 
+# Local asset dumps / scratch (not app source)
+/SPOQ Tools/
+_bmad-output/implementation-artifacts/_epic4-review*
+
 # debug
 npm-debug.log*
 yarn-debug.log*
