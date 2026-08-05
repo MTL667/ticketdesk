@@ -2,7 +2,8 @@
 title: 'Show bakwagen primary photo on BookAVan hero'
 type: 'feature'
 created: '2026-08-05'
-status: 'draft'
+status: 'done'
+baseline_commit: '8662afdcd652d51ce5122ec7967cbce6db9259a1'
 context:
   - '{project-root}/_bmad-output/project-context.md'
 ---
@@ -60,10 +61,10 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `app/api/bookavan/vehicle-photo/route.ts` -- GET for any authenticated user; load bakwagen + primary (or first) photo; stream via `getObject`; 401/404/502 as matrix
-- [ ] `components/bookavan/VehiclePhotoHero.tsx` -- Hero image under title; hide on error/404; sensible alt
-- [ ] `app/bookavan/page.tsx` -- Mount hero under heading/intro, before calendar
-- [ ] `lib/translations.ts` -- Add alt/label keys nl/fr/en
+- [x] `app/api/bookavan/vehicle-photo/route.ts` -- GET for any authenticated user; load bakwagen + primary (or first) photo; stream via `getObject`; 401/404/502 as matrix
+- [x] `components/bookavan/VehiclePhotoHero.tsx` -- Hero image under title; hide on error/404; sensible alt
+- [x] `app/bookavan/page.tsx` -- Mount hero under heading/intro, before calendar
+- [x] `lib/translations.ts` -- Add alt/label keys nl/fr/en
 
 **Acceptance Criteria:**
 - Given a logged-in user and a primary bakwagen photo in inventaris, when they open BookAVan, then that photo appears under the page title.
@@ -94,3 +95,26 @@ Do not expose marketing inventaris CRUD. Keep layout restrained: one image under
 - Marketing: bakwagen has primary photo → BookAVan shows it under title for a normal user.
 - Remove/hide all photos → BookAVan has no broken image.
 - Incognito GET `/api/bookavan/vehicle-photo` → 401.
+
+## Suggested Review Order
+
+**BookAVan-scoped photo API**
+
+- Any logged-in user; bakwagen only; streams primary (or first) photo.
+  [`vehicle-photo/route.ts:18`](../../app/api/bookavan/vehicle-photo/route.ts#L18)
+
+- Errors use `no-store` so failed `<img>` loads are not sticky-cached.
+  [`vehicle-photo/route.ts:7`](../../app/api/bookavan/vehicle-photo/route.ts#L7)
+
+**Hero UI**
+
+- Show only after successful load; hide on error (no empty chrome).
+  [`VehiclePhotoHero.tsx:10`](../../components/bookavan/VehiclePhotoHero.tsx#L10)
+
+- Mounted under intro, before calendar.
+  [`page.tsx:278`](../../app/bookavan/page.tsx#L278)
+
+**i18n**
+
+- Alt text for the vehicle photo.
+  [`translations.ts:128`](../../lib/translations.ts#L128)

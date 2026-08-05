@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { AvailabilityCalendar } from "@/components/bookavan/AvailabilityCalendar";
 import { ReservationForm } from "@/components/bookavan/ReservationForm";
 import { RulesPanel } from "@/components/bookavan/RulesPanel";
+import { VehiclePhotoHero } from "@/components/bookavan/VehiclePhotoHero";
 import { VehicleStatusCard } from "@/components/bookavan/VehicleStatusCard";
 import {
   ReservationHistory,
@@ -273,6 +274,8 @@ export default function BookAVanPage() {
           </h2>
           <p className="mt-2 text-gray-600 max-w-2xl">{t("bookavanIntro")}</p>
         </div>
+
+        <VehiclePhotoHero />
 
         <AvailabilityCalendar
           reservations={reservations}

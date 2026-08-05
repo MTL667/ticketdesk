@@ -76,3 +76,9 @@ Pre-existing issues surfaced during adversarial review but not in scope of the c
 - **Conditional GET / ETag** — `Cache-Control: private, max-age=300` only; no ETag/Last-Modified yet.
 - **Migrate legacy `ItemPhoto.url` values** — display ignores them; column still filled on upload for bookkeeping.
 - **Content-Type allowlist on proxy response** — `nosniff` added; non-image Content-Type from S3 not rewritten.
+
+## Deferred from: code review of spec-bookavan-vehicle-photo (2026-08-05)
+
+- **Cache bust when primary photo changes** — fixed `/api/bookavan/vehicle-photo` URL + `max-age=300`; no ETag/version query yet.
+- **Hero retry on transient 5xx** — hide-on-error is permanent until remount; acceptable for v1.
+- **Aspect-ratio reserve / CLS** — hero appears only after load; no reserved space while fetching.
